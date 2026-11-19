@@ -1,0 +1,15 @@
+{
+  "name": "starter",
+  "version": "0.1.0",
+  "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist and egm-helper.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0",
+  "dependencies": [
+    "tiger-style-core",
+    "debugging-discipline",
+    "antagonist-protagonist",
+    "egm-helper"
+  ]
+}

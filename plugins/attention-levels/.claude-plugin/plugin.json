@@ -1,0 +1,9 @@
+{
+  "name": "attention-levels",
+  "version": "0.1.0",
+  "description": "Type (ENABLE_LOW_ENERGY) on a tired day and the agent asks fewer questions; HIGH makes it ask more.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0"
+}

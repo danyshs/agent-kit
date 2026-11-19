@@ -1,0 +1,12 @@
+{
+  "name": "pre-push",
+  "version": "0.1.0",
+  "description": "A git hook that asks you to confirm a code review ran before a branch's first push, plus the rule that tells Claude how to pass it.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0",
+  "dependencies": [
+    "tiger-style-core"
+  ]
+}

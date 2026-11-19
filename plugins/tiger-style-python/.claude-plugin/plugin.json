@@ -1,0 +1,12 @@
+{
+  "name": "tiger-style-python",
+  "version": "0.1.0",
+  "description": "tiger-style rules for Python. Needs tiger-style-core.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0",
+  "dependencies": [
+    "tiger-style-core"
+  ]
+}

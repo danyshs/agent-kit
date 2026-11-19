@@ -1,0 +1,37 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v python3 >/dev/null 2>&1 || exit 0; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" agent; s=$?; [ $s -eq 0 ] || exit 2",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v python3 >/dev/null 2>&1 || exit 0; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" turn; s=$?; [ $s -eq 0 ] || exit 2",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"$CLAUDE_PLUGIN_ROOT/rules/guards.1.json\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

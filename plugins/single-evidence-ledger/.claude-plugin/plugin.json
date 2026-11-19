@@ -1,0 +1,9 @@
+{
+  "name": "single-evidence-ledger",
+  "version": "0.1.0",
+  "description": "One home per fact, no stale notes, and a FACTS.md ledger of facts, derivations, hypotheses and tests for long debugging work.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0"
+}

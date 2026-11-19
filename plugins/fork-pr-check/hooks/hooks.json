@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat \"$CLAUDE_PLUGIN_ROOT/rules/fork-pr-check.1.json\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

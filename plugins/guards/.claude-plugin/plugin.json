@@ -1,0 +1,9 @@
+{
+  "name": "guards",
+  "version": "0.1.0",
+  "description": "Opt-in spending limits: refuses sub-agent launches past a budget you set, any model priced above Opus 5.5, and more than 10M tokens in one turn.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0"
+}

@@ -1,0 +1,52 @@
+#!/bin/sh
+# Pre-push review gate. Install per repo: copy to <repo>/.git/hooks/pre-push and chmod +x.
+#
+# Two parts, in order:
+#   1. A project-agnostic tiger-style REVIEW-MODE confirmation, on the first push of
+#      a branch it blocks until a review-mode pass is acknowledged.
+#   2. A chain-through to a repo-local .githooks/pre-push, so a repo can add its own
+#      toolchain checks (lint/type/test) without losing this gate.
+#
+# Bypass once (both parts) with:  git push --no-verify
+set -e
+
+# --- Tiger-style review-mode gate (first push of a branch only) --------------
+# Push is the moment work first leaves this machine, so this is where we confirm a
+# tiger-style REVIEW MODE pass actually ran against the diff. Reference/author mode does
+# not count; the review-mode P0 passes (spec-conformance, PR-comment, safety) catch
+# whole-diff defects. Fires only on the FIRST push of a branch (no upstream yet) and never
+# on main/master, so re-pushes of fix-ups stay quiet. Set REVIEW_DONE=1 to acknowledge
+# non-interactively; bypass entirely via git push --no-verify.
+branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+if [ "$branch" != "main" ] && [ "$branch" != "master" ] && [ -n "$branch" ] \
+	&& ! git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+	echo "pre-push: first push of '$branch'."
+	echo "          Has tiger-style REVIEW MODE run against this diff?"
+	echo "          Run it and clear every P0 before opening a PR — reference/author mode does not count."
+	if [ "$REVIEW_DONE" != "1" ]; then
+		if [ -t 0 ] || [ -e /dev/tty ]; then
+			printf "          Type 'yes' to confirm review mode was run and all P0s cleared: " >&2
+			read -r reply </dev/tty || reply=""
+			case "$reply" in
+				yes|y|Y|YES) : ;;
+				*) echo "pre-push: aborting — run tiger-style review mode first (or set REVIEW_DONE=1 / use --no-verify)." >&2; exit 1 ;;
+			esac
+		else
+			echo "pre-push: aborting — no tty to confirm the review-mode pass. Set REVIEW_DONE=1 to acknowledge, or use --no-verify." >&2
+			exit 1
+		fi
+	fi
+fi
+# -----------------------------------------------------------------------------
+
+# --- Repo-local chain-through ------------------------------------------------
+# A repo opts into its own checks by committing an executable .githooks/pre-push.
+# It receives the same stdin (the ref list git feeds pre-push) and arguments.
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+if [ -n "$repo_root" ] && [ -x "$repo_root/.githooks/pre-push" ]; then
+	echo "pre-push: running repo-local .githooks/pre-push..."
+	exec "$repo_root/.githooks/pre-push" "$@"
+fi
+# -----------------------------------------------------------------------------
+
+echo "pre-push: gate passed."

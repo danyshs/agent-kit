@@ -1,0 +1,9 @@
+{
+  "name": "turn-sound",
+  "version": "0.1.0",
+  "description": "A short sound when it's your turn, different for every session, so parallel sessions can be told apart by ear.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0"
+}
