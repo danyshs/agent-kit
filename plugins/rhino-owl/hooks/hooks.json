@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sed \"s|@PLUGIN_ROOT@|$CLAUDE_PLUGIN_ROOT|g\" \"$CLAUDE_PLUGIN_ROOT/rules/rhino-owl.1.json\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

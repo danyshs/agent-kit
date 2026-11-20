@@ -62,6 +62,9 @@ or where acting on a wrong belief would cost a rebuild. Not for small, clear fix
   any fact it can't act on without guessing. This applies to private code too: plagiarism is wrong whoever
   sees it. Why: a probe was written in the same context that had just read the
   driver it learned from.
+- Rhinos (the rhino-owl plugin) are exempt: their code is thrown away with them, so they may
+  read and run anything. Only the Owl's rows survive, and whoever builds from those rows must not
+  have opened a rhino's worktree.
 - Parallel sessions don't assign IDs. They write unnumbered rows to a `proposed-ledger.md` next
   to their work; the ledger's owner numbers and merges them, so two sessions never take the same
   ID. That file is an edit queue (above).

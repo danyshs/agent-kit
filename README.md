@@ -96,6 +96,7 @@ The other rules (`when-to-ask`, `agent-orchestration`, `single-evidence-ledger`,
 | `pre-push` | yes | none | none | `git-hook/pre-push`, run by git, only if you copy it in | none |
 | `agent-orchestration` | yes | none | none | none | none |
 | `single-evidence-ledger` | yes | none | none | none | `FACTS.md` in your project, when Claude starts one |
+| `rhino-owl` | yes | `rhino-owl` (how to run it) | none | `rhino.py`, only when Claude runs it for an exploration; it starts headless `claude -p` runs | rhino worktrees under `.claude/worktrees/`, a results file, `proposed-ledger.md` and `rom-evidence/` next to your launch sheet |
 | `code-voice` | yes | none | none | none | none |
 | `fork-pr-check` | yes | none | none | none | none |
 
@@ -143,6 +144,7 @@ A status line (the bar under the prompt showing model, git branch, tokens and co
 |---|---|
 | `agent-orchestration` | When Claude should use sub-agents and when it shouldn't, and how to keep its memory uncluttered. |
 | `single-evidence-ledger` | Each fact lives in one place. For long debugging, a `FACTS.md` file of facts, guesses and tests. |
+| `rhino-owl` | For questions only running things can answer. Up to four throwaway prototype runs try different routes, some deliberately weaker for comparison, each with a dollar cap, a sandbox and none of your instructions. Then a fresh agent turns what they found, failures included, into ledger rows. Needs `guards`; costs real money per run (each start is about $0.18). |
 | `code-voice` | My taste in comments and code: short, explains why, no class hierarchies by default. Take it only if you share the taste. |
 | `fork-pr-check` | When working in a fork, makes Claude check the right repo before saying "there's no PR". |
 

@@ -14,9 +14,9 @@ import datetime
 import json
 import re
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Tuple
 
 MEGABYTE = 1024 * 1024
 MAIN_BYTES_MAX = 128 * MEGABYTE  # real sessions stay well under this
@@ -45,7 +45,7 @@ PROPOSAL_DOLLARS_MAX = 20.0  # over this the user types the line; a "yes" is too
 TURN_CAP_PATTERN = re.compile(r"turn\s+cap\s+(\d{1,3}m|off)", re.IGNORECASE)
 SYNTHETIC_MODEL = "<synthetic>"
 
-Record = Dict[str, object]
+Record = dict[str, object]
 
 
 class Refusal(Exception):
@@ -63,7 +63,7 @@ def field(value: object, *keys: str) -> object:
     return value
 
 
-def text_of(content: object) -> Optional[str]:
+def text_of(content: object) -> str | None:
     """String content, or the first text block of list content (images ride along)."""
     if isinstance(content, str):
         return content
@@ -76,7 +76,7 @@ def text_of(content: object) -> Optional[str]:
     return None
 
 
-def typed_text(record: Record) -> Optional[str]:
+def typed_text(record: Record) -> str | None:
     """The text of a message the user typed, else None."""
     if record.get("type") == "user":
         if field(record, "origin", "kind") != "human":
@@ -97,7 +97,7 @@ def first_line(text: str) -> str:
     return text.split("\n", 1)[0].strip()
 
 
-def parse_line(raw: bytes, is_last: bool) -> Optional[Record]:
+def parse_line(raw: bytes, is_last: bool) -> Record | None:
     """A half-written last line is skipped; a broken line anywhere else is an error."""
     try:
         value: object = json.loads(raw)
@@ -116,9 +116,10 @@ def parse_line(raw: bytes, is_last: bool) -> Optional[Record]:
 def timestamp_of(record: Record) -> datetime.datetime:
     stamp = record.get("timestamp")
     if not isinstance(stamp, str):
-        raise ValueError("transcript line without a timestamp")
-    # 3.9's fromisoformat does not take a trailing Z
-    parsed = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+        raise TypeError("transcript line without a timestamp")
+    # hooks run /usr/bin/python3 (3.9), whose fromisoformat rejects a trailing Z
+    zoned = stamp[:-1] + "+00:00" if stamp.endswith("Z") else stamp
+    parsed = datetime.datetime.fromisoformat(zoned)
     if parsed.tzinfo is None:
         raise ValueError(f"timestamp without a zone: {stamp}")
     return parsed
@@ -154,7 +155,7 @@ def count(value: object) -> int:
     return value
 
 
-def usage_of(record: Record) -> Optional[Usage]:
+def usage_of(record: Record) -> Usage | None:
     if record.get("type") != "assistant":
         return None
     model = field(record, "message", "model")
@@ -176,8 +177,8 @@ def usage_of(record: Record) -> Optional[Usage]:
     )
 
 
-def dedup_usage(records: List[Record]) -> Dict[str, Usage]:
-    by_id: Dict[str, Usage] = {}
+def dedup_usage(records: list[Record]) -> dict[str, Usage]:
+    by_id: dict[str, Usage] = {}
     for record in records:
         usage = usage_of(record)
         message_id = field(record, "message", "id")
@@ -247,7 +248,7 @@ def main_transcript(hook_input: Record) -> Path:
 # -- turn mode
 
 
-def turn_cap_of(line: str) -> Optional[str]:
+def turn_cap_of(line: str) -> str | None:
     """'off', a cap in tokens as digits, or None when the line is not a valid cap line."""
     match = TURN_CAP_PATTERN.fullmatch(line)
     if match is None:
@@ -261,9 +262,9 @@ def turn_cap_of(line: str) -> Optional[str]:
     return str(millions * TOKENS_PER_MILLION)
 
 
-def read_back(path: Path, size_bytes: int) -> List[Record]:
+def read_back(path: Path, size_bytes: int) -> list[Record]:
     """The current turn's records, plus the latest earlier typed numeric cap line, in file order."""
-    kept: List[Record] = []
+    kept: list[Record] = []
     turn_started = False
     for index, raw in enumerate(lines_reversed(path, size_bytes)):
         human = b'"human"' in raw
@@ -288,7 +289,7 @@ def read_back(path: Path, size_bytes: int) -> List[Record]:
     return kept
 
 
-def turn_cap(records: List[Record]) -> Optional[int]:
+def turn_cap(records: list[Record]) -> int | None:
     """Tokens allowed this turn; None = off. Off applies only to the turn it starts."""
     lines = [first_line(text) for text in map(typed_text, records) if text is not None]
     if lines and turn_cap_of(lines[-1]) == "off":
@@ -300,7 +301,7 @@ def turn_cap(records: List[Record]) -> Optional[int]:
     return TURN_CAP_DEFAULT
 
 
-def turn_tokens(records: List[Record]) -> int:
+def turn_tokens(records: list[Record]) -> int:
     start = 0
     for index, record in enumerate(records):
         if typed_text(record) is not None:
@@ -334,28 +335,28 @@ def run_turn(hook_input: Record) -> str:
 class Prices:
     ceiling: str
     floor_tokens: int
-    aliases: Dict[str, str]
-    families: Dict[str, str]
-    models: Dict[str, Dict[str, float]]
+    aliases: dict[str, str]
+    families: dict[str, str]
+    models: dict[str, dict[str, float]]
 
 
-def string_map(value: object, name: str) -> Dict[str, str]:
+def string_map(value: object, name: str) -> dict[str, str]:
     if not isinstance(value, dict):
-        raise ValueError(f"{name} is not an object")
-    result: Dict[str, str] = {}
+        raise TypeError(f"{name} is not an object")
+    result: dict[str, str] = {}
     for key, item in value.items():
         if not isinstance(key, str) or not isinstance(item, str):
-            raise ValueError(f"{name} holds a non-string entry")
+            raise TypeError(f"{name} holds a non-string entry")
         result[key] = item
     return result
 
 
-def rate_table(value: object) -> Dict[str, Dict[str, float]]:
+def rate_table(value: object) -> dict[str, dict[str, float]]:
     if not isinstance(value, dict) or not value:
         raise ValueError("models is not a non-empty object")
-    models: Dict[str, Dict[str, float]] = {}
+    models: dict[str, dict[str, float]] = {}
     for model_id, rates in value.items():
-        row: Dict[str, float] = {}
+        row: dict[str, float] = {}
         for name in RATE_NAMES:
             rate = field(rates, name)
             if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate < 0:
@@ -381,14 +382,14 @@ def load_prices(path: Path) -> Prices:
                 raise ValueError(f"{target} has no rates")
         if prices.floor_tokens == 0:
             raise ValueError("floor_tokens is missing or zero")
-    except (OSError, ValueError) as error:
+    except (OSError, ValueError, TypeError) as error:
         raise Refusal(f"refused: {path} unreadable: {error}; fix: correct {path}") from error
     return prices
 
 
 @dataclass(frozen=True)
 class LaunchRates:
-    rates: Dict[str, float]
+    rates: dict[str, float]
     priced: bool  # False: a newer id than the table, priced by its family
 
 
@@ -402,7 +403,7 @@ def rates_for_launch(model: str, prices: Prices) -> LaunchRates:
     raise Refusal(f"refused: unknown model {model}; fix: add it to {PRICES_PATH}")
 
 
-def check_ceiling(model: str, rates: Dict[str, float], prices: Prices) -> None:
+def check_ceiling(model: str, rates: dict[str, float], prices: Prices) -> None:
     ceiling = prices.models[prices.ceiling]
     for name in RATE_NAMES:
         if rates[name] > ceiling[name]:
@@ -413,7 +414,7 @@ def check_ceiling(model: str, rates: Dict[str, float], prices: Prices) -> None:
             )
 
 
-def floor_usd(rates: Dict[str, float], prices: Prices) -> float:
+def floor_usd(rates: dict[str, float], prices: Prices) -> float:
     return prices.floor_tokens * rates["cw5m"] / TOKENS_PER_MILLION
 
 
@@ -447,13 +448,13 @@ def resolve_model(hook_input: Record, main_path: Path) -> str:
 
 @dataclass(frozen=True)
 class Budget:
-    dollars: Optional[float]  # None with off=False: no budget line at all
+    dollars: float | None  # None with off=False: no budget line at all
     off: bool
-    since: Optional[datetime.datetime]
+    since: datetime.datetime | None
     approved: bool = False  # from approved proposals, not a typed line
 
 
-def proposal_dollars(text: str) -> Optional[float]:
+def proposal_dollars(text: str) -> float | None:
     """N from a reply whose last non-empty line is `proposed budget $N`, if 0 < N <= max."""
     lines = [line.strip().strip("`*").strip() for line in text.split("\n")]
     lines = [line for line in lines if line]
@@ -469,7 +470,7 @@ def proposal_dollars(text: str) -> Optional[float]:
     return dollars
 
 
-def assistant_text(record: Record) -> Optional[str]:
+def assistant_text(record: Record) -> str | None:
     """All text blocks of an agent line joined, else None (tool calls and thinking only)."""
     if record.get("type") != "assistant":
         return None
@@ -496,10 +497,10 @@ class Approval:
     since: datetime.datetime
 
 
-def scan_budget(main_path: Path, size_bytes: int) -> Tuple[Optional[Budget], List[Approval]]:
+def scan_budget(main_path: Path, size_bytes: int) -> tuple[Budget | None, list[Approval]]:
     """Newest typed budget line (stops the scan), plus approvals newer than it, newest first."""
-    approvals: List[Approval] = []
-    pending: Optional[Record] = None  # a typed approval word waiting for the agent text before it
+    approvals: list[Approval] = []
+    pending: Record | None = None  # a typed approval word waiting for the agent text before it
     for index, raw in enumerate(lines_reversed(main_path, size_bytes)):
         if pending is not None and b'"assistant"' in raw:
             reply = parse_line(raw, index == 0)
@@ -551,11 +552,14 @@ def budget_line(main_path: Path) -> Budget:
     return Budget(dollars, False, oldest.since, approved=True)
 
 
-def subagent_files(main_path: Path) -> List[Path]:
-    directory = main_path.with_suffix("") / "subagents"
-    if not directory.is_dir():
-        return []
-    paths = sorted(directory.glob("*.jsonl"))
+def subagent_files(main_path: Path) -> list[Path]:
+    """Sub-agent transcripts, plus the headless rhino transcripts scripts/rhino.py copies in."""
+    session_dir = main_path.with_suffix("")
+    paths: list[Path] = []
+    for name in ("subagents", "rhinos"):  # rhinos/ runs outside the Agent tool, so copied here
+        directory = session_dir / name
+        if directory.is_dir():
+            paths.extend(sorted(directory.glob("*.jsonl")))
     if len(paths) > SUBAGENT_FILES_MAX:
         raise Refusal(
             f"refused: {len(paths)} sub-agent transcripts, over {SUBAGENT_FILES_MAX};"
@@ -578,8 +582,8 @@ class Spend:
     unpriced: int
 
 
-def spend_usd(paths: List[Path], since: datetime.datetime, prices: Prices) -> Spend:
-    records: List[Record] = []
+def spend_usd(paths: list[Path], since: datetime.datetime, prices: Prices) -> Spend:
+    records: list[Record] = []
     for path in paths:
         raws = [raw for raw in path.read_bytes().split(b"\n") if raw]
         for index, raw in enumerate(raws):
@@ -650,7 +654,7 @@ def read_hook_input() -> Record:
     return record
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     mode = argv[1] if len(argv) == 2 else ""
     try:
         if mode == "agent":
@@ -662,7 +666,7 @@ def main(argv: List[str]) -> int:
     except Refusal as refusal:
         print(f"guard: {refusal}", file=sys.stderr)
         return 2
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 -- any crash is reported, never raised
         if mode == "turn":  # a broken turn cap must not lock every tool call
             print(f"guard: turn cap skipped, internal error: {type(error).__name__}: {error}", file=sys.stderr)
             return 0

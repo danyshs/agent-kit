@@ -135,6 +135,12 @@
       "category": "extras"
     },
     {
+      "name": "rhino-owl",
+      "source": "./plugins/rhino-owl",
+      "description": "Exploration by throwaway prototypes: up to four capped, sandboxed runs try different routes, then a fresh agent turns what they found into ledger rows. Needs guards.",
+      "category": "extras"
+    },
+    {
       "name": "code-voice",
       "source": "./plugins/code-voice",
       "description": "One engineer's taste in comments and code: terse, explains why, no class hierarchies by default. Keep it only if it fits you.",
