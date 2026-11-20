@@ -14,12 +14,12 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, cast
+from typing import cast
 
 MEGABYTE = 1024 * 1024
 STDIN_BYTES_MAX = 16 * MEGABYTE  # same bound as guard.py
 LEVEL_FILE_LINES_MAX = 100  # a level changes a few times per session at most
-TRIGGERS: Dict[str, str] = {
+TRIGGERS: dict[str, str] = {
     "(ENABLE_LOW_ENERGY)": "LOW",
     "(ENABLE_MEDIUM_ENERGY)": "MEDIUM",
     "(ENABLE_HIGH_ENERGY)": "HIGH",
@@ -42,7 +42,7 @@ def attention_dir() -> Path:
 
 def strip_code(text: str) -> str:
     """The text with fenced blocks and inline code removed, so a quoted trigger doesn't count."""
-    kept: List[str] = []
+    kept: list[str] = []
     fenced = False
     for line in text.split("\n"):
         if FENCE_PATTERN.match(line):
@@ -53,7 +53,7 @@ def strip_code(text: str) -> str:
     return "\n".join(kept)
 
 
-def trigger_in(prompt: str) -> Optional[str]:
+def trigger_in(prompt: str) -> str | None:
     """The level of the last trigger outside code, or None."""
     found = TRIGGER_PATTERN.findall(strip_code(prompt))
     if not found:
@@ -61,21 +61,21 @@ def trigger_in(prompt: str) -> Optional[str]:
     return TRIGGERS[found[-1]]
 
 
-def read_lines(level_file: Path) -> List[str]:
+def read_lines(level_file: Path) -> list[str]:
     if not level_file.exists():
         return []
     text = level_file.read_text(encoding="utf-8")
     return [line for line in text.split("\n") if line.strip()]
 
 
-def parse_line(line: str) -> Tuple[str, str]:
+def parse_line(line: str) -> tuple[str, str]:
     parts = line.split()
     if len(parts) != 3 or parts[1] not in LEVELS or parts[2] not in SOURCES:
         raise ValueError(f"bad level file line: {line!r}")
     return parts[1], parts[2]
 
 
-def last_real(lines: List[str]) -> Optional[Tuple[str, str]]:
+def last_real(lines: list[str]) -> tuple[str, str] | None:
     """The newest (level, source) that isn't an error mark, or None for a new session."""
     for line in reversed(lines):
         level, source = parse_line(line)
@@ -84,7 +84,7 @@ def last_real(lines: List[str]) -> Optional[Tuple[str, str]]:
     return None
 
 
-def append_level(level_file: Path, lines: List[str], level: str, source: str) -> None:
+def append_level(level_file: Path, lines: list[str], level: str, source: str) -> None:
     assert level in LEVELS and source in SOURCES, (level, source)
     assert (level == "?") == (source == "error"), (level, source)
     if len(lines) >= LEVEL_FILE_LINES_MAX:
@@ -95,14 +95,14 @@ def append_level(level_file: Path, lines: List[str], level: str, source: str) ->
         handle.write(f"{now} {level} {source}\n")
 
 
-def decide(hook_input: Dict[str, object]) -> str:
+def decide(hook_input: dict[str, object]) -> str:
     """Updates the level file and returns the line for the agent's context."""
     session = hook_input.get("session_id")
     if not isinstance(session, str) or not SESSION_ID_PATTERN.fullmatch(session):
         raise ValueError(f"bad session_id: {session!r}")
     prompt = hook_input.get("prompt")
     if not isinstance(prompt, str):
-        raise ValueError("hook input has no prompt")
+        raise TypeError("hook input has no prompt")
     level_file = attention_dir() / session
     lines = read_lines(level_file)
     newest = parse_line(lines[-1])[0] if lines else None
@@ -124,7 +124,7 @@ def mark_error(raw: bytes) -> None:
         decoded: object = json.loads(raw.decode("utf-8"))
         if not isinstance(decoded, dict):
             return
-        session = cast(Dict[str, object], decoded).get("session_id")
+        session = cast(dict[str, object], decoded).get("session_id")
         if isinstance(session, str) and SESSION_ID_PATTERN.fullmatch(session):
             level_file = attention_dir() / session
             append_level(level_file, read_lines(level_file), "?", "error")
@@ -139,8 +139,8 @@ def main() -> int:
             raise ValueError("hook input over 16 MB")
         decoded: object = json.loads(raw.decode("utf-8"))
         if not isinstance(decoded, dict):
-            raise ValueError("hook input is not a JSON object")
-        print(decide(cast(Dict[str, object], decoded)))
+            raise TypeError("hook input is not a JSON object")
+        print(decide(cast(dict[str, object], decoded)))
     except Exception as error:  # noqa: BLE001 - any failure falls back to Medium, loudly
         print(f"attention: {error}", file=sys.stderr)
         print("Attention level: Medium (hook error)")

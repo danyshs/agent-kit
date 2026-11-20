@@ -46,11 +46,11 @@ sec() { printf '%s' "${C_LBL}$1${R}"; }
 # ---------- one jq call extracts everything ----------
 IFS=$'\x1f' read -r model model_id cwd projdir wt_git repo_own repo_name ver style \
     cost dur_ms api_ms lines_add lines_del \
-    ctx_in ctx_out ctx_size ctx_used ctx_rem cu_in cu_out cu_cw cu_cr over200k \
+    ctx_in _ ctx_size ctx_used ctx_rem cu_in cu_out cu_cw cu_cr over200k \
     fast effort thinking \
     r5 r5_at r7 r7_at rsp rsp_at \
-    pc_warm pc_ttl pc_exp pc_req pc_miss pc_reb pc_hit pc_cw pc_missre pc_cold pc_cause \
-    sess_id sess_name transcript vimmode agent pr_num pr_url pr_state wt_name wt_branch <<<"$(
+    pc_warm pc_ttl pc_exp pc_req pc_miss pc_reb pc_hit _ _ pc_cold pc_cause \
+    sess_id sess_name transcript vimmode agent pr_num _ pr_state wt_name wt_branch <<<"$(
     jq -r '[
       (.model.display_name // "?"), (.model.id // ""),
       (.workspace.current_dir // .cwd // ""), (.workspace.project_dir // ""),
@@ -149,6 +149,7 @@ fi
 [[ -n $agent ]]     && l1+="${SEP}$(sec agent) ${C_MODEL}${agent}${R}"
 [[ -n $vimmode ]]   && l1+="${SEP}$(sec vim) ${C_TIME}${vimmode}${R}"
 [[ -n $style && $style != default ]] && l1+="${SEP}$(sec style) ${style}"
+# shellcheck disable=SC1111  # the curly quotes are shown text, not shell quoting
 [[ -n $sess_name ]] && l1+="${SEP}${C_TIME}“${sess_name}”${R}"
 
 # ===================== LINE 2: context window =====================

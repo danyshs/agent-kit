@@ -15,7 +15,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 MEGABYTE = 1024 * 1024
 LOG_BYTES_MAX = MEGABYTE  # ~2,000 entries; past it the user deletes the file
@@ -31,13 +30,13 @@ class BadArgs(Exception):
     pass
 
 
-def parse(argv: List[str]) -> Dict[str, str]:
+def parse(argv: list[str]) -> dict[str, str]:
     if not argv or argv[0] != "append":
         raise BadArgs("first argument must be 'append'")
     rest = argv[1:]
     if len(rest) % 2:
         raise BadArgs("every flag needs a value")
-    values: Dict[str, str] = {}
+    values: dict[str, str] = {}
     allowed = ("repo",) + TEXT_FIELDS + YES_NO_FIELDS
     for index in range(0, len(rest), 2):  # pairs; odd length refused above
         flag, value = rest[index], rest[index + 1]
@@ -74,9 +73,9 @@ def log_path(repo: Path) -> Path:
     return Path.home() / ".claude" / "lowlog" / f"{repo.name}-{digest}.jsonl"
 
 
-def entry(values: Dict[str, str], repo: Path) -> str:
+def entry(values: dict[str, str], repo: Path) -> str:
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    record: Dict[str, object] = {"ts": now, "repo": str(repo)}
+    record: dict[str, object] = {"ts": now, "repo": str(repo)}
     for name in TEXT_FIELDS:
         record[name.replace("-", "_")] = values[name]
     for name in YES_NO_FIELDS:
@@ -86,7 +85,7 @@ def entry(values: Dict[str, str], repo: Path) -> str:
     return line
 
 
-def append(path: Path, line: str) -> Optional[str]:
+def append(path: Path, line: str) -> str | None:
     """None when written; the refusal text when the log is full."""
     if path.exists() and path.stat().st_size > LOG_BYTES_MAX:
         return f"LowLog over 1 MiB; delete it to clear: {path}"
@@ -101,7 +100,7 @@ def append(path: Path, line: str) -> Optional[str]:
     return None
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     try:
         values = parse(argv)
         repo = top_level(values["repo"])

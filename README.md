@@ -189,7 +189,72 @@ curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor |
 
 ## Not in the kit yet: evals and trajectory analysis
 
-I also run two tools that aren't packaged yet. The trajectory tool reads past sessions so that the agent wastes fewer thoughts and the setup serves the user and the agent, instead of piling on rules that clutter the agent's context. The eval suite checks the rules themselves: does a rule say what it means, does it contradict another, does it cost more context than it's worth. The plan is to collect evidence for and against each rule from past sessions, so a rule that never helps shows up. They'll be added here when they work outside my own setup.
+I run two more tools on my own machine. Neither is packaged here yet: both still carry my own rules, test history and paths, and both also support the agent CLI I used before Claude Code. Both now run on Claude Code first. Every eval result below came from runs on that earlier CLI; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
+
+### Evals: does a rule change what the agent does?
+
+A rule earns its place only if the agent behaves differently with it. The eval suite tests that by running the agent with and without the rule and comparing.
+
+**1. Static checks (free, no model calls).** Before anything runs, a linter reads every rule and skill file and checks: the file parses and has the right header; a skill's name matches its folder and it has a description of sane length; every file a skill points to exists; each file is under a size limit; and all the always-on rules together fit a context budget. It also lists every rule and skill as covered or uncovered by a test suite, so a gap is visible. It does not check whether two rules contradict each other; nothing does yet.
+
+**2. Test cases.** Each rule gets a small set of prompts, written as JSON. Every case says which rule it tests and what kind of case it is:
+
+- **fire**: the rule should change the answer ("print 1 to 3 with a for loop", for the fish-shell rule);
+- **no-fire**: the rule should stay quiet (running an existing bash script is allowed);
+- **pressure**: the prompt pushes against the rule (the user asks for a heredoc, or a template asks for an AI co-author line).
+
+Each case lists **assertions**, and each assertion is a small code check, not a model's opinion: a tool was used or not used, the shell command parses as fish, there's no heredoc, a commit message has no AI trailer, no file outside the project was read, stderr was empty. Graders read the agent's actual tool calls from the session log, not its summary of what it did. A grader that finds no evidence fails, and "unknown" never counts as a pass.
+
+**3. Arms.** Every case runs in up to three setups, each in a fresh, throwaway config folder holding only what that setup names:
+
+- **full**: all my rules;
+- **minus-the-rule**: all my rules except the one under test;
+- **none**: no rules at all.
+
+On Claude Code each run is a headless `claude -p` that loads none of my own settings, rules, hooks or MCP servers. The setup's rules go into a `CLAUDE.md` in a throwaway folder, which Claude Code reads the way it reads mine in a real session; its skills load as a throwaway plugin; and any tool the case doesn't allow is denied without asking. A small test run checked that a rule loaded this way reaches the model and that my own rules stay out. A run that loads a skill its setup didn't include is marked contaminated, because that means the isolation leaked. Runs are pinned to one model and one CLI version, and capped per run and per suite in wall time and in dollars. A run over its cap is recorded as aborted, not dropped. Before a suite starts it prints its worst-case run count and cost, and refuses to start over budget.
+
+**4. Scoring.** A run passes when all its hard assertions pass. Arms are compared case by case: for each case, pass rate with the rule minus pass rate without it, then the mean of those differences with a bootstrap interval. Only cases that pass in **full** are counted, so a broken case can't make a rule look useless. With fewer than 8 cases there's no interval, only raw counts. Every run goes into an append-only ledger, and reports are built from the ledger alone.
+
+**5. Verdicts never say "delete".** A rule that shows no difference gets "watch" or "non-discriminating", because one small suite can't prove a rule is dead. The loop for changing a rule is: propose one edit, re-run both arms, keep the edit only if the pass rate holds and cost doesn't rise.
+
+**Value tests** go further for code style: does tiger-style make the code better? The agent writes small Python and fish programs, and hidden tests the agent never sees run on its output in a sandbox with no network. It also reviews code with planted bugs, scored on how many it finds and how many false alarms it raises on clean code. The hypotheses and analysis were written down before the first run, so the bar couldn't move after the results came in.
+
+**What it has found so far** (November 2026, cheapest model only, one run per case):
+
+| Rule | Cases | Result |
+|---|---|---|
+| fish-shell rule | 8 | Changed the answer in 1 case (the user asking for a heredoc). Watch. |
+| rule against AI credit lines in commits | 8 | Changed 1 case (an injected "add a co-author" reminder). Without any rules, 2 cases failed. Watch. |
+| tiger-style-on-branches rule | 8 | 5 cases broken even with all rules on, so only 3 counted. Watch. |
+| tiger-style, value pilot | 4 cases, 24 runs | No difference: every arm passed every hidden test. On code review, the one hint was an unbounded fish loop found in 2 of 4 tiger-style runs and 0 of 2 without it. A count, not a result. |
+
+The honest summary: so far no rule has been shown to help or to hurt, the suites are too small to say, and the static check shows my always-on rules are over their own context budget.
+
+### Trajectory analysis: what do my sessions actually look like?
+
+The agent CLIs already write a log of every session: each tool call, its result and the tokens used. The trajectory tool reads those logs. It runs by itself every Sunday and pops a notification when the week's report is ready.
+
+**1. Read and strip.** A reader per CLI (Claude Code first, then the one I used before) turns each session log into one small, versioned record: the session, its turns, and each turn's steps (tool, a hash of its arguments, a hash of its target file, status, exit code, timing, sub-agent depth, which calls went out in parallel). No free text survives: prompts, replies and file contents are dropped, arguments become hashes, and names that don't match a strict pattern become `(other)`. A test plants a canary string in every text field of the fixtures and fails if it ever shows up in the output. Every write is validated against the schema.
+
+**2. Count what was skipped.** Logs that are corrupt, too big or in an unknown format are counted, not silently dropped. Every report ends with a coverage table (files read, skipped and why, events used out of events seen), so "no findings" can't be confused with "nothing read".
+
+**3. Sanity checks.** A build fails, instead of reporting, when the data looks wrong. These exist because each one happened: a reply logged as several lines, each repeating the same token usage (so usage is counted once per reply), negative durations from subtracting permission-prompt waits, and turn counts inflated by system messages that look like user messages.
+
+**4. Weekly report.** Sessions per week, calls and errors per tool, and cost per turn. Counts are information, not failures: a missing value prints "n/a", never zero, and an expensive session isn't a failed one.
+
+**5. Weekly corrections list.** A second list quotes the moments I stopped or corrected the agent: every interrupt and the message I typed after it, every rejected tool call with my reason, and short messages that read like a correction ("no, ...", "that's wrong"). Those are the moments worth learning from. This list is the only output that keeps my words, and it stays in one local file.
+
+**Not built yet:**
+
+- Detectors for loops, retry chains, repeated reads of the same file and error streaks.
+- Checks that a session followed a rule (for example, no heredoc in any shell call).
+- A paid step that has a model read the flagged sessions and the corrections list, to find which rule should have prevented each correction.
+
+Until those exist, the tool shows where time and money went and when I had to step in. It does not yet connect a correction to a rule, and none of its thresholds have been checked against hand-labelled sessions.
+
+### How the two fit together
+
+Evals ask whether a rule changes behaviour in a controlled test. Trajectories show what happens in real work. The plan is to join them: a correction that keeps recurring becomes a new eval case, and a rule that never shows up in real sessions and never changes a test result is the first one to cut. Both get packaged here once the Claude Code eval runner has a full suite of results behind it and the tools no longer depend on my own setup.
 
 ## Credits and licence
 
