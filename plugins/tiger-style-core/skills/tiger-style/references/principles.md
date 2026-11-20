@@ -211,7 +211,9 @@ specifically, so Rust stays unverified here, same as Java's `Object`.
 
 ### Toolchain
 
-- **All warnings on, strictest setting, from day one.** Use the project's formatter,
+- **All warnings on, strictest setting, from day one.** Every language in the repo has a
+  linter whose committed config errors on every warning (detail: SKILL.md "Toolchain gates").
+  Use the project's formatter,
   linter, checker and tests (e.g. a Python project: `ruff` + `pyright` clean, `pytest` green;
   fish: `fish_indent --check`, `fish --no-execute`, the script's `--test`). See the
   language's rules file.

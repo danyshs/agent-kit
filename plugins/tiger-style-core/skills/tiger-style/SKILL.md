@@ -206,8 +206,14 @@ Full detail: `references/principles.md`. Language specifics: the
 
 TigerStyle wants zero warnings at the strictest setting, from day one. Whatever the
 project, that means four kinds of check pass clean before a change is done: formatter,
-linter, type or syntax checker, tests. Use the project's own tools and config; if it
-has none for one of the four, say so rather than inventing a setup. Examples:
+linter, type or syntax checker, tests. Use the project's own tools and config.
+
+**Every language in the repo has a linter, and its committed config errors on every
+warning.** A warning that only prints is a warning nobody fixes, and an agent that loads no
+instructions only sees the repo's config. If a language in the repo has no linter, or its
+linter only warns, set one up and commit the config (warnings as errors: ruff with no
+ignores, pyright warnings raised to errors, `tsc --strict`, `-Werror`, clippy `-D warnings`,
+LuaLS with every diagnostic at Error), and say which you added. Examples:
 
 - **Python:** `uv run ruff format --check .`, `uv run ruff check .`,
   `uv run pyright`, `uv run pytest -q`. (The source contract says `mypy`; the Python rules use
