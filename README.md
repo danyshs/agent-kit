@@ -189,7 +189,7 @@ curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor |
 
 ## Not in the kit yet: evals and trajectory analysis
 
-I run two more tools on my own machine. Neither is packaged here yet: both still carry my own rules, test history and paths, and both also support the agent CLI I used before Claude Code. Both now run on Claude Code first. Every eval result below came from runs on that earlier CLI; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
+I run two more tools on my own machine. Neither is packaged here yet: both still carry my own rules, test history and paths. Both now run on Claude Code first and still support [Kiro](https://kiro.dev)'s CLI, the agent I used before. Every eval result below came from Kiro runs; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
 
 ### Evals: does a rule change what the agent does?
 
@@ -201,9 +201,9 @@ A rule earns its place only if the agent behaves differently with it. The eval s
 
 - **fire**: the rule should change the answer ("print 1 to 3 with a for loop", for the fish-shell rule);
 - **no-fire**: the rule should stay quiet (running an existing bash script is allowed);
-- **pressure**: the prompt pushes against the rule (the user asks for a heredoc, or a template asks for an AI co-author line).
+- **pressure**: the prompt pushes against the rule (the user asks for a heredoc).
 
-Each case lists **assertions**, and each assertion is a small code check, not a model's opinion: a tool was used or not used, the shell command parses as fish, there's no heredoc, a commit message has no AI trailer, no file outside the project was read, stderr was empty. Graders read the agent's actual tool calls from the session log, not its summary of what it did. A grader that finds no evidence fails, and "unknown" never counts as a pass.
+Each case lists **assertions**, and each assertion is a small code check, not a model's opinion: a tool was used or not used, the shell command parses as fish, there's no heredoc, no file outside the project was read, stderr was empty. Graders read the agent's actual tool calls from the session log, not its summary of what it did. A grader that finds no evidence fails, and "unknown" never counts as a pass.
 
 **3. Arms.** Every case runs in up to three setups, each in a fresh, throwaway config folder holding only what that setup names:
 
@@ -211,7 +211,7 @@ Each case lists **assertions**, and each assertion is a small code check, not a 
 - **minus-the-rule**: all my rules except the one under test;
 - **none**: no rules at all.
 
-On Claude Code each run is a headless `claude -p` that loads none of my own settings, rules, hooks or MCP servers. The setup's rules go into a `CLAUDE.md` in a throwaway folder, which Claude Code reads the way it reads mine in a real session; its skills load as a throwaway plugin; and any tool the case doesn't allow is denied without asking. A small test run checked that a rule loaded this way reaches the model and that my own rules stay out. A run that loads a skill its setup didn't include is marked contaminated, because that means the isolation leaked. Runs are pinned to one model and one CLI version, and capped per run and per suite in wall time and in dollars. A run over its cap is recorded as aborted, not dropped. Before a suite starts it prints its worst-case run count and cost, and refuses to start over budget.
+On Claude Code each run is a headless `claude -p` that loads none of my own settings, rules, hooks or MCP servers. The setup's rules go into a `CLAUDE.md` in a throwaway folder, which Claude Code reads the way it reads mine in a real session; its skills load as a throwaway plugin; and any tool the case doesn't allow is denied without asking. A small test run checked that a rule loaded this way reaches the model and that my own rules stay out. A run that loads a skill its setup didn't include is marked contaminated, because that means the isolation leaked. Runs are pinned to one model and one CLI version, and capped per run and per suite in wall time and in dollars (credits on Kiro). A run over its cap is recorded as aborted, not dropped. Before a suite starts it prints its worst-case run count and cost, and refuses to start over budget.
 
 **4. Scoring.** A run passes when all its hard assertions pass. Arms are compared case by case: for each case, pass rate with the rule minus pass rate without it, then the mean of those differences with a bootstrap interval. Only cases that pass in **full** are counted, so a broken case can't make a rule look useless. With fewer than 8 cases there's no interval, only raw counts. Every run goes into an append-only ledger, and reports are built from the ledger alone.
 
@@ -224,7 +224,6 @@ On Claude Code each run is a headless `claude -p` that loads none of my own sett
 | Rule | Cases | Result |
 |---|---|---|
 | fish-shell rule | 8 | Changed the answer in 1 case (the user asking for a heredoc). Watch. |
-| rule against AI credit lines in commits | 8 | Changed 1 case (an injected "add a co-author" reminder). Without any rules, 2 cases failed. Watch. |
 | tiger-style-on-branches rule | 8 | 5 cases broken even with all rules on, so only 3 counted. Watch. |
 | tiger-style, value pilot | 4 cases, 24 runs | No difference: every arm passed every hidden test. On code review, the one hint was an unbounded fish loop found in 2 of 4 tiger-style runs and 0 of 2 without it. A count, not a result. |
 
@@ -234,7 +233,7 @@ The honest summary: so far no rule has been shown to help or to hurt, the suites
 
 The agent CLIs already write a log of every session: each tool call, its result and the tokens used. The trajectory tool reads those logs. It runs by itself every Sunday and pops a notification when the week's report is ready.
 
-**1. Read and strip.** A reader per CLI (Claude Code first, then the one I used before) turns each session log into one small, versioned record: the session, its turns, and each turn's steps (tool, a hash of its arguments, a hash of its target file, status, exit code, timing, sub-agent depth, which calls went out in parallel). No free text survives: prompts, replies and file contents are dropped, arguments become hashes, and names that don't match a strict pattern become `(other)`. A test plants a canary string in every text field of the fixtures and fails if it ever shows up in the output. Every write is validated against the schema.
+**1. Read and strip.** A reader per CLI (Claude Code, then Kiro) turns each session log into one small, versioned record: the session, its turns, and each turn's steps (tool, a hash of its arguments, a hash of its target file, status, exit code, timing, sub-agent depth, which calls went out in parallel). No free text survives: prompts, replies and file contents are dropped, arguments become hashes, and names that don't match a strict pattern become `(other)`. A test plants a canary string in every text field of the fixtures and fails if it ever shows up in the output. Every write is validated against the schema.
 
 **2. Count what was skipped.** Logs that are corrupt, too big or in an unknown format are counted, not silently dropped. Every report ends with a coverage table (files read, skipped and why, events used out of events seen), so "no findings" can't be confused with "nothing read".
 

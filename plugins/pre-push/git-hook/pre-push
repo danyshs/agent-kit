@@ -39,13 +39,27 @@ if [ "$branch" != "main" ] && [ "$branch" != "master" ] && [ -n "$branch" ] \
 fi
 # -----------------------------------------------------------------------------
 
+# --- Personal add-on checks ---------------------------------------------------
+# Every executable in pre-push.d/ next to this hook runs with the same stdin and arguments.
+# git feeds the ref list once, so keep it to hand for each check and the repo-local hook.
+refs=$(cat)
+addon_dir=$(dirname "$0")/pre-push.d
+if [ -d "$addon_dir" ]; then
+	for check in "$addon_dir"/*; do
+		[ -x "$check" ] || continue
+		printf '%s\n' "$refs" | "$check" "$@"
+	done
+fi
+# -----------------------------------------------------------------------------
+
 # --- Repo-local chain-through ------------------------------------------------
 # A repo opts into its own checks by committing an executable .githooks/pre-push.
 # It receives the same stdin (the ref list git feeds pre-push) and arguments.
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 if [ -n "$repo_root" ] && [ -x "$repo_root/.githooks/pre-push" ]; then
 	echo "pre-push: running repo-local .githooks/pre-push..."
-	exec "$repo_root/.githooks/pre-push" "$@"
+	printf '%s\n' "$refs" | "$repo_root/.githooks/pre-push" "$@"
+	exit $?
 fi
 # -----------------------------------------------------------------------------
 
