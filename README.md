@@ -16,7 +16,7 @@ If that prints a version number, you're ready.
 
 ## Install the Starter pack (recommended)
 
-Paste these four lines into your terminal, one at a time. The last two add Google's design-doc workflow (EGM), which the Starter pack uses.
+Paste these four lines into your terminal, one at a time. The last two add Google's design-doc workflow (EGM), which the Starter pack uses. EGM is spec-driven development: a spec is written and reviewed before any code.
 
 ```
 claude plugin marketplace add danyshs/agent-kit
@@ -119,7 +119,7 @@ Install any single module with `claude plugin install <name>@agent-kit`. Remove 
 | `tiger-style-core` | Coding rules from TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. It loads only when you ask, for example "review this with tiger style". |
 | `debugging-discipline` | Seven debugging rules, each from a real mistake. For example: exit code 0 doesn't prove a check passed. |
 | `antagonist-protagonist` | Before you approve a plan, one agent argues against it and another defends it. You decide. |
-| `egm-helper` | When to write a design doc first, and how to run Google's EGM review on it. |
+| `egm-helper` | When to write a design doc first, and how to run Google's EGM review on it. This is spec-driven development. |
 | `single-evidence-ledger` | Each fact lives in one place, and long debugging keeps a `FACTS.md` file. See [FACTS.md](#factsmd-how-a-guess-becomes-a-fact). |
 
 ### Language rules for tiger-style (pick the ones you use)
@@ -164,12 +164,16 @@ One variable per test, because a test that changes two things settles neither. H
 
 ### Rhino-Owl: finding out by running things
 
-Some questions can't be answered by reading: the docs are thin, the forums disagree, or the truth is in code you can't see. For those, the Rhino-Owl model (ROM) replaces guessing with cheap, throwaway runs.
+Some questions can't be answered by reading: the docs are thin, the forums disagree, or the truth is in code you can't see. For those, the Rhino-Owl model (ROM) replaces guessing with cheap, throwaway runs. ROM is an implementation of prototype-driven development: build quick prototypes to learn what's true, then throw them away.
+
+The two fit together. EGM (spec-driven) decides how to build something; ROM (prototype-driven) finds out what's true when reading can't. ROM's results can feed an EGM spec as evidence, and you can install either one without the other.
 
 1. **Claude proposes it**, names what it already read and why that didn't settle it, and shows a launch sheet: up to four routes, each with a model and a dollar cap. Nothing runs until you approve the budget.
 2. **Rhinos charge down one route each** with almost no planning. Each is a headless Claude run in its own git worktree, with a dollar cap, the OS sandbox, a deny list, and none of your rules or settings loaded. Some are *controls*: they try a route expected to be weaker, so comparisons rest on results rather than opinion. A failed rhino is a finding, not a waste.
 3. **The Owl** is a fresh run that starts after the rhinos finish. It reads what they built and how they failed, and writes rows for `FACTS.md`. It never picks a winner; that's yours.
 4. **The rhinos' code is thrown away.** Only the Owl's rows survive. If you then build the real thing, it's a normal task, with the rows as evidence.
+
+**Rhinos start bare, on purpose.** They run without your rules, CLAUDE.md, settings, hooks, plugins or MCP servers, which is what keeps them cheap. If you want them to run with your rules anyway, ask Claude to add `scaffolding` to the launch sheet (the `rhino-owl` skill shows how). It can load your user or project settings, or only the rule files you name. A heavier start comes out of each rhino's dollar cap, so a bloated one can stop before it builds much of a prototype. Raise the caps to make up for it.
 
 An optional module that needs `guards`. Every rhino is a paid run, and the `guards` budget counts its spend like any sub-agent's.
 

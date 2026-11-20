@@ -22,6 +22,33 @@ JSON, next to the work (e.g. `rom/<topic>.json`):
 - `stop_point`: "works, shown by <output>" or "fails at <named call> with the captured error".
   The launcher only checks it's there; making it checkable is on the writer.
 - `device` is optional. Rhinos sharing one run one after another; the rest run in parallel.
+- `scaffolding` is optional and off by default; see below before using it.
+
+## Rhinos start bare on purpose
+
+Rhinos run with no CLAUDE.md, rule files, settings, hooks, plugins or MCP servers. That is what
+keeps them cheap: a rhino's cap goes on building the prototype, not on reading instructions at
+every turn. Leave it that way unless the user asks for rules in their rhinos.
+
+If the user insists, add `scaffolding` to the sheet. Only rhinos get it; the Owl always starts
+bare, and the results file records what the rhinos loaded so the Owl knows.
+
+```json
+"scaffolding": {"setting_sources": ["project"], "rule_files": ["rom/rhino-rules.md"]}
+```
+
+- `setting_sources`: any of `user` (everything under `~/.claude/`: your CLAUDE.md and what it
+  imports, settings, hooks, and the plugins you've enabled, rule plugins included), `project` (the
+  repo's CLAUDE.md and `.claude/settings.json`) and `local` (`.claude/settings.local.json`).
+- `rule_files`: up to 8 text files, 64 KB each and 128 KB together, paths relative to the sheet.
+  Their text is added to every rhino's system prompt. Prefer this to `user`: it loads only the
+  rules a rhino needs, not your whole setup.
+- MCP servers stay off either way. The sandbox, deny list and dollar cap still apply.
+
+**Raise the caps to match.** Everything loaded is paid for at each rhino's start, out of its own
+cap. A bloated start can spend most of a rhino's cap before it builds much of a prototype, and it
+stops `capped` with little to show. The launcher prints a notice when scaffolding is on; raise
+each `cap_usd` unless the user has said not to.
 
 ## Commands
 

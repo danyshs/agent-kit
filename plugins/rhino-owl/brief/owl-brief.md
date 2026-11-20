@@ -7,7 +7,8 @@ Inputs (paths at the end of this brief):
 - The launch sheet: per rhino, the question, direction, what it differs on (axis), label (frontier
   = best guess; control = a route expected to be weaker, run on purpose as a baseline), stop point.
 - The results file: per rhino, its status (done, waiting-human, capped, crashed, unknown), cost,
-  worktree and log path.
+  worktree and log path. A `scaffolding` entry means the rhinos started with those settings and
+  rule files loaded, not bare; say so in any row a rule could have swayed.
 - Each worktree: the rhino's code, its rhino.log, and human-queue.md if it asked for a person.
 
 Rules:

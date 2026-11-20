@@ -7,6 +7,9 @@ dollar cap, the OS sandbox and a deny list. Its transcript is copied where guard
   rhino.py owl    --sheet PATH --session ID [--user-present]
   rhino.py remove --sheet PATH        (only after the user accepts the Owl's rows)
 
+Rhinos start bare (no settings, rules or MCP) to stay cheap; a sheet's opt-in "scaffolding" key
+loads chosen settings and rule files into rhinos, at the cost of each rhino's cap.
+
 Exit 0 ok, 1 a run or git step failed, 2 refused (bad sheet, budget, model). Standard library
 only; runs on python 3.9.
 """
@@ -40,8 +43,11 @@ SESSION_PATTERN = re.compile(r"[A-Za-z0-9_-]{1,64}")
 ROW_FIELDS = ("name", "question", "direction", "axis", "label", "stop_point", "model")
 LABELS = ("frontier", "control")
 # no CLAUDE.md, rules, hooks or MCP, user's or project's: no startup tax
-ISOLATION = ["--setting-sources", "", "--strict-mcp-config",
-             "--mcp-config", '{"mcpServers":{}}']
+MCP_OFF = ["--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}']
+SETTING_SOURCES = ("user", "project", "local")  # what claude --setting-sources accepts
+RULE_FILES_MAX = 8
+RULE_FILE_BYTES_MAX = 64 * 1024
+RULE_BYTES_MAX = 128 * 1024  # all rule files together; each byte is paid on every rhino's start
 SANDBOX = {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True,
                        "allowUnsandboxedCommands": False}}
 ALLOWED_TOOLS = "Bash Read Write Edit Glob Grep WebFetch WebSearch"
@@ -67,11 +73,23 @@ class Rhino:
 
 
 @dataclass(frozen=True)
+class Scaffolding:
+    """Opt-in instructions for rhinos; the default is none, the cheap start."""
+    setting_sources: tuple[str, ...]
+    rule_files: tuple[str, ...]
+    rules_text: str  # the rule files joined, appended to each rhino's system prompt
+
+
+NO_SCAFFOLDING = Scaffolding((), (), "")
+
+
+@dataclass(frozen=True)
 class Sheet:
     path: Path
     rhinos: list[Rhino]
     owl_model: str
     owl_cap_usd: float
+    scaffolding: Scaffolding
 
 
 # -- the launch sheet
@@ -110,6 +128,39 @@ def parse_rhino(row: object, index: int) -> Rhino:
     return Rhino(cap_usd=cap_field(row, "cap_usd", where), device=device, **fields)
 
 
+def read_rule_file(path: Path) -> str:
+    if not path.is_file() or path.stat().st_size > RULE_FILE_BYTES_MAX:
+        raise Refused(f"rule file {path} is missing or over {RULE_FILE_BYTES_MAX} bytes")
+    try:
+        return path.read_text()
+    except UnicodeDecodeError as err:
+        raise Refused(f"rule file {path} is not text: {err}") from err
+
+
+def parse_scaffolding(raw: dict[str, object], base: Path) -> Scaffolding:
+    value = raw.get("scaffolding")
+    if value is None:
+        return NO_SCAFFOLDING
+    if not isinstance(value, dict) or set(value) - {"setting_sources", "rule_files"}:
+        raise Refused("scaffolding takes only setting_sources and rule_files")
+    sources: object = value.get("setting_sources", [])
+    files: object = value.get("rule_files", [])
+    if not isinstance(sources, list) or not isinstance(files, list):
+        raise Refused("scaffolding: setting_sources and rule_files are lists")
+    names = [source for source in sources if isinstance(source, str) and source in SETTING_SOURCES]
+    if len(names) != len(sources) or len(set(names)) != len(names):
+        raise Refused(f"setting_sources: drawn from {SETTING_SOURCES}, no repeats")
+    paths = [Path(name).expanduser() for name in files if isinstance(name, str) and name]
+    if len(paths) != len(files) or len(paths) > RULE_FILES_MAX:
+        raise Refused(f"rule_files: up to {RULE_FILES_MAX} non-empty paths")
+    if not names and not paths:
+        raise Refused("scaffolding is empty; leave it out")
+    rules_text = "\n\n".join(read_rule_file(base / path) for path in paths)
+    if len(rules_text.encode()) > RULE_BYTES_MAX:
+        raise Refused(f"rule files total over {RULE_BYTES_MAX} bytes")
+    return Scaffolding(tuple(names), tuple(str(base / path) for path in paths), rules_text)
+
+
 def load_sheet(path: Path) -> Sheet:
     if not path.is_file() or path.stat().st_size > SHEET_BYTES_MAX:
         raise Refused(f"sheet {path} is missing or over {SHEET_BYTES_MAX} bytes")
@@ -127,7 +178,9 @@ def load_sheet(path: Path) -> Sheet:
     if len(set(names)) != len(names):
         raise Refused("rhino names must be unique")
     owl_model = text_field(raw, "owl_model", "sheet")
-    sheet = Sheet(path.resolve(), rhinos, owl_model, cap_field(raw, "owl_cap_usd", "sheet"))
+    scaffolding = parse_scaffolding(raw, path.resolve().parent)
+    sheet = Sheet(path.resolve(), rhinos, owl_model, cap_field(raw, "owl_cap_usd", "sheet"),
+                  scaffolding)
     assert len(sheet.rhinos) <= RHINOS_MAX
     return sheet
 
@@ -188,11 +241,16 @@ def repo_root(start: Path) -> Path:
     return Path(out.stdout.strip())
 
 
-def claude_command(model: str, cap_usd: float, worktree: str | None, prompt: str) -> list[str]:
+def claude_command(model: str, cap_usd: float, worktree: str | None, prompt: str,
+                   scaffolding: Scaffolding = NO_SCAFFOLDING) -> list[str]:
+    sources = ",".join(scaffolding.setting_sources)  # "" loads nothing: the cheap default
     command = [os.environ.get("ROM_CLAUDE_BIN", "claude"), "-p", "--model", model,
                "--max-budget-usd", f"{cap_usd:.2f}", "--output-format", "json",
                "--permission-mode", "acceptEdits", "--allowedTools", ALLOWED_TOOLS,
-               "--disallowedTools", DENIED_TOOLS, "--settings", json.dumps(SANDBOX), *ISOLATION]
+               "--disallowedTools", DENIED_TOOLS, "--settings", json.dumps(SANDBOX),
+               "--setting-sources", sources, *MCP_OFF]
+    if scaffolding.rules_text:
+        command += ["--append-system-prompt", scaffolding.rules_text]
     if worktree is not None:
         command += ["-w", worktree]
     return command + [prompt]
@@ -285,12 +343,12 @@ def finish_rhino(root: Path, main_path: Path, rhino: Rhino,
     return result
 
 
-def run_group(root: Path, main_path: Path, group: list[Rhino],
-              user_present: bool) -> list[dict[str, object]]:
+def run_group(root: Path, main_path: Path, group: list[Rhino], user_present: bool,
+              scaffolding: Scaffolding) -> list[dict[str, object]]:
     results = []
     for rhino in group:  # one device, one rhino at a time
         command = claude_command(rhino.model, rhino.cap_usd, f"rom-{rhino.name}",
-                                 rhino_prompt(rhino, user_present))
+                                 rhino_prompt(rhino, user_present), scaffolding)
         results.append(finish_rhino(root, main_path, rhino, run_session(command, root)))
     return results
 
@@ -308,6 +366,16 @@ def groups_of(rhinos: list[Rhino]) -> list[list[Rhino]]:
     return groups
 
 
+def scaffolding_notice(scaffolding: Scaffolding) -> str:
+    sources = ",".join(scaffolding.setting_sources) or "none"
+    size = len(scaffolding.rules_text.encode())
+    return (f"rhino: NOTICE scaffolding on (setting sources: {sources}; "
+            f"{len(scaffolding.rule_files)} rule files, {size} bytes). Rhinos are meant to start "
+            "bare, which is what keeps them cheap. Every rhino now pays for this at startup, out "
+            "of its own cap; a rhino whose cap goes mostly on startup stops before it builds much. "
+            "Raise cap_usd to make up for it.")
+
+
 def launch(sheet: Sheet, session: str, user_present: bool) -> int:
     if any(rhino.device for rhino in sheet.rhinos) and not user_present:
         raise Refused("a rhino needs a device; hardware rhinos run only with --user-present")
@@ -319,15 +387,21 @@ def launch(sheet: Sheet, session: str, user_present: bool) -> int:
     total_usd = sum(rhino.cap_usd for rhino in sheet.rhinos) + sheet.owl_cap_usd
     models = [rhino.model for rhino in sheet.rhinos] + [sheet.owl_model]
     print(f"rhino: {check_budget(main_path, models, total_usd)}")
+    if sheet.scaffolding != NO_SCAFFOLDING:
+        print(scaffolding_notice(sheet.scaffolding), file=sys.stderr)
     results: list[dict[str, object]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=RHINOS_MAX) as pool:
-        futures = [pool.submit(run_group, root, main_path, group, user_present)
+        futures = [pool.submit(run_group, root, main_path, group, user_present, sheet.scaffolding)
                    for group in groups_of(sheet.rhinos)]
         for future in futures:
             results.extend(future.result())
     assert len(results) == len(sheet.rhinos)
     results_path = sheet.path.with_suffix(".results.json")
-    results_path.write_text(json.dumps({"rhinos": results}, indent=2) + "\n")
+    recorded: dict[str, object] = {"rhinos": results}
+    if sheet.scaffolding != NO_SCAFFOLDING:  # the Owl should know the rhinos didn't start bare
+        recorded["scaffolding"] = {"setting_sources": list(sheet.scaffolding.setting_sources),
+                                   "rule_files": list(sheet.scaffolding.rule_files)}
+    results_path.write_text(json.dumps(recorded, indent=2) + "\n")
     for result in results:
         print(f"rhino: {result['name']} {result['status']} ${result.get('cost_usd')}")
     print(f"rhino: results in {results_path}")
