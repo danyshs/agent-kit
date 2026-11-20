@@ -1,0 +1,23 @@
+[project]
+name = "agent-evals"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["skills", "planted", "runs", "hidden", "value"]  # fixtures hold deliberately bad code
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]  # fixture dirs hold the model's test files, not ours
+
+[tool.pyright]
+include = ["lib", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingImports = true
+reportUnnecessaryTypeIgnoreComment = true

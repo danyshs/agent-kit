@@ -1,0 +1,4 @@
+{"id":"1","payload":{"type":"tool_call","toolCallId":"sd-1","toolName":"grep_search","args":{"query":"CANARY 0xDEADBEEF"},"executionId":"exec-9999","subExecutionId":"44444444-4444-4444-8444-444444444444","status":"approved"},"timestamp":"2026-11-14T10:00:02.000Z"}
+{"id":"2","payload":{"type":"tool_result","toolCallId":"sd-1","success":true,"content":"CANARY 0xDEADBEEF","executionId":"exec-9999","subExecutionId":"44444444-4444-4444-8444-444444444444"},"timestamp":"2026-11-14T10:00:02.100Z"}
+{"id":"3","payload":{"type":"tool_call","toolCallId":"sd-2","toolName":"read_file","args":{"path":"/CANARY 0xDEADBEEF/f.txt"},"executionId":"exec-9999","subExecutionId":"not-the-file-name","status":"approved"},"timestamp":"2026-11-14T10:00:02.500Z"}
+{"id":"4","payload":{"type":"tool_result","toolCallId":"sd-2","success":true,"content":"CANARY 0xDEADBEEF","executionId":"exec-9999","subExecutionId":"not-the-file-name"},"timestamp":"2026-11-14T10:00:02.600Z"}

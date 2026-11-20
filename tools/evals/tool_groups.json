@@ -1,0 +1,7 @@
+{
+  "file_read_search": ["read_file", "code"],
+  "file_edit": ["fs_write", "str_replace"],
+  "shell": ["execute_bash"],
+  "network": ["web_fetch", "remote_web_search"],
+  "loaders": ["disclose_context", "knowledge"]
+}

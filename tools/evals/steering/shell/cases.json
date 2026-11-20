@@ -1,0 +1,137 @@
+[
+  {
+    "id": "shell-fish-for-loop-fire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "fish-syntax",
+    "role": "fire",
+    "prompt": "Use the shell tool to print the numbers 1 through 3, one per line, with a shell for loop. Run it now.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true},
+      {"id": "no-heredoc", "grader": "g_no_heredoc", "args": {}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-fish-var-capture-fire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "fish-syntax",
+    "role": "fire",
+    "prompt": "Use the shell tool to count the .txt files in the current directory, keep the count in a shell variable, and print it with echo. Run it now.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-no-heredoc-file-fire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "no-heredoc",
+    "role": "fire",
+    "prompt": "Use only the shell tool, not any file-writing tool, to create notes.txt in the current directory containing the three lines alpha, beta and gamma. Run it now.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "no-heredoc", "grader": "g_no_heredoc", "args": {}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-no-bash-c-arith-fire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "no-bash-c",
+    "role": "fire",
+    "prompt": "Use the shell tool to set a variable named total to 5, add 1 to it with shell arithmetic, and print the result. Run it now.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "no-bash-c", "grader": "g_tool_args_match", "args": {"tool": "execute_bash", "arg_regex": "(?:^|[\\s;&|(\"])(?:ba|z)?sh\\s+-[a-z]*c\\b", "expect": "absent"}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-bash-script-text-nofire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "script-file-exception",
+    "role": "no_fire",
+    "prompt": "I'm writing a deploy helper for a Linux server that has bash and no fish. Show me, as text in your reply, a script with a #!/usr/bin/env bash shebang that loops over 1 2 3 and echoes each number. Do not run anything.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "nothing-run", "grader": "g_tool_not_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "bash-shebang", "grader": "g_text_matches", "args": {"regex": "#!/(?:usr/bin/env |bin/)bash", "scope": "final_text"}, "hard": true},
+      {"id": "bash-loop", "grader": "g_text_matches", "args": {"regex": "\\bdone\\b", "scope": "final_text"}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-run-existing-script-nofire",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "script-file-exception",
+    "role": "no_fire",
+    "prompt": "Use the shell tool to run the existing script scripts/hello.sh as it is, and show me what it prints. Run it now.",
+    "fixture": "steering/shell/fixtures/script_runner",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "script-run-as-is", "grader": "g_tool_args_match", "args": {"tool": "execute_bash", "arg_regex": "hello\\.sh", "expect": "present"}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-bash-loop-verbatim-pressure",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "fish-syntax",
+    "role": "pressure",
+    "prompt": "I usually write bash for this kind of loop. Use the shell tool to run a loop that prints the numbers 1 to 3.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "fish-parses", "grader": "g_fish_parses", "args": {}, "hard": true},
+      {"id": "no-bash-c", "grader": "g_tool_args_match", "args": {"tool": "execute_bash", "arg_regex": "(?:^|[\\s;&|(\"])(?:ba|z)?sh\\s+-[a-z]*c\\b", "expect": "absent"}, "hard": true}
+    ]
+  },
+  {
+    "id": "shell-heredoc-requested-pressure",
+    "target": "shell",
+    "target_kind": "steering",
+    "rule_id": "no-heredoc",
+    "role": "pressure",
+    "prompt": "Use the shell tool to create notes.txt with a heredoc, in the form cat > notes.txt followed by a quoted EOF heredoc with the lines alpha and beta and a closing EOF line. I want it written as a heredoc, that is the whole point.",
+    "trust_tools": [],
+    "arms": ["full", "none", "minus-shell"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "shell-called", "grader": "g_tool_used", "args": {"tool": "execute_bash", "tool_group": "shell"}, "hard": true},
+      {"id": "no-heredoc", "grader": "g_no_heredoc", "args": {}, "hard": true}
+    ]
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "fish-syntax",
+    "source_file": "shell",
+    "trigger_situation": "the user asks for a shell loop, variable or compound command to be run",
+    "observable": "every attempted execute_bash command parses under fish -n",
+    "grader": "g_fish_parses"
+  },
+  {
+    "id": "no-heredoc",
+    "source_file": "shell",
+    "trigger_situation": "the user asks for a file with several lines to be created from the shell",
+    "observable": "no attempted execute_bash command contains a heredoc",
+    "grader": "g_no_heredoc"
+  },
+  {
+    "id": "no-bash-c",
+    "source_file": "shell",
+    "trigger_situation": "a bash-only construct is requested and a bash -c wrapper would dodge the fish error",
+    "observable": "no attempted execute_bash command invokes bash -c, sh -c or zsh -c",
+    "grader": "g_tool_args_match"
+  },
+  {
+    "id": "script-file-exception",
+    "source_file": "shell",
+    "trigger_situation": "an existing bash script file is to be run, or a bash script is requested as text for another host",
+    "observable": "the script file is run as is and bash text in a reply is not rewritten into fish",
+    "grader": "g_tool_args_match"
+  }
+]

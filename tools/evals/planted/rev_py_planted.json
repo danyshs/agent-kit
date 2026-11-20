@@ -1,0 +1,20 @@
+{"fixture": "rev_py_planted",
+ "fixture_version": 2,
+ "items": [
+  {"id": "p1", "file": "src/mirror.py", "line": 38, "category": "unbounded_loop", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p2", "file": "src/mirror.py", "line": 45, "category": "missing_assertion", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p3", "file": "src/mirror.py", "line": 10, "category": "unitless_name", "in_tiger_style_categories": true, "allowed_severities": ["P2", "P3"]},
+  {"id": "p4", "file": "src/mirror.py", "line": 57, "category": "off_by_one", "in_tiger_style_categories": false, "allowed_severities": ["P0", "P1"]},
+  {"id": "p5", "file": "src/mirror.py", "line": 63, "category": "shell_injection", "in_tiger_style_categories": false, "allowed_severities": ["P0"]}
+ ],
+ "acceptable_extras": [
+  {"id": "x1", "file": "src/mirror.py", "line": 21, "note": "assert on external input (url) is stripped by python -O"},
+  {"id": "x2", "file": "src/mirror.py", "line": 25, "note": "download writes to the final cache name, a failed read leaves a partial tarball"},
+  {"id": "x3", "file": "src/mirror.py", "line": 26, "note": "the 1_000_000 chunk bound ends the loop silently, caller gets a truncated file"},
+  {"id": "x4", "file": "src/mirror.py", "line": 26, "note": "the 1_000_000 bound is an unnamed magic number with no stated reason"},
+  {"id": "x5", "file": "src/mirror.py", "line": 41, "note": "except OSError retries permanent errors (404, disk full, permissions)"},
+  {"id": "x6", "file": "src/mirror.py", "line": 46, "note": "prune lists the whole directory with no cap"},
+  {"id": "x7", "file": "src/mirror.py", "line": 47, "note": "comprehension variable n is an abbreviation"},
+  {"id": "x8", "file": "src/mirror.py", "line": 53, "note": "newest sorts by name, not by modification time"},
+  {"id": "x9", "file": "src/mirror.py", "line": 63, "note": "subprocess.run has no timeout"}
+ ]}

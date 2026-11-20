@@ -1,0 +1,13 @@
+{"id":"1","payload":{"type":"turn_start","executionId":"exec-0001","turnId":"exec-0001"},"timestamp":"2026-11-14T10:00:00.000Z"}
+{"id":"2","payload":{"type":"pending_interaction","toolCallId":"call-1","executionId":"exec-0001","consentRound":1,"question":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:00:00.200Z"}
+{"id":"3","payload":{"type":"interaction_resolved","toolCallId":"call-1","executionId":"exec-0001","consentRound":1,"outcome":"selected"},"timestamp":"2026-11-14T10:00:00.900Z"}
+{"id":"4","payload":{"type":"pending_interaction","toolCallId":"call-1","executionId":"exec-0001","consentRound":2,"question":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:00:00.950Z"}
+{"id":"5","payload":{"type":"interaction_resolved","toolCallId":"call-1","executionId":"exec-0001","consentRound":2,"outcome":"selected"},"timestamp":"2026-11-14T10:00:00.990Z"}
+{"id":"6","payload":{"type":"tool_call","toolCallId":"call-1","toolName":"invoke_sub_agent","args":{"prompt":"CANARY 0xDEADBEEF"},"executionId":"exec-0001","status":"approved"},"timestamp":"2026-11-14T10:00:01.000Z"}
+{"id":"7","payload":{"type":"sub_agent_start","parentExecutionId":"exec-0001","subSessionId":"33333333-3333-4333-8333-333333333333"},"timestamp":"2026-11-14T10:00:01.100Z"}
+{"id":"8","payload":{"type":"tool_result","toolCallId":"call-1","success":true,"content":"CANARY 0xDEADBEEF","executionId":"exec-0001"},"timestamp":"2026-11-14T10:00:09.000Z"}
+{"id":"9","payload":{"type":"usage_summary","executionId":"exec-0001","promptTurnSummaries":[{"unit":"credit","usage":1.25},{"unit":"credit","usage":0.75}]},"timestamp":"2026-11-14T10:00:09.500Z"}
+{"id":"10","payload":{"type":"turn_end","executionId":"exec-0001","stopReason":"tool_use"},"timestamp":"2026-11-14T10:00:09.800Z"}
+{"id":"11","payload":{"type":"tool_call","toolCallId":"call-2","toolName":"read_file","args":{"path":"/CANARY 0xDEADBEEF/d.txt"},"executionId":"exec-0002","status":"approved"},"timestamp":"2026-11-14T10:02:00.000Z"}
+{"id":"12","payload":{"type":"tool_result","toolCallId":"call-2","success":true,"content":"CANARY 0xDEADBEEF","executionId":"exec-0002"},"timestamp":"2026-11-14T10:02:00.400Z"}
+{"id":"13","payload":{"type":"usage_summary","executionId":"exec-0002","promptTurnSummaries":[],"requestIds":["r1"]},"timestamp":"2026-11-14T10:02:01.000Z"}

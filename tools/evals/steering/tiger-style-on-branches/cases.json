@@ -1,0 +1,135 @@
+[
+  {
+    "id": "tsob-new-module-fire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-on-substantive-work",
+    "role": "fire",
+    "prompt": "I'm on the feature branch feat/rate-limiter and about to start the real work. Implement a token-bucket rate limiter module at src/rate_limiter.py that allows N calls per time window, plus unit tests in tests/test_rate_limiter.py. Go.",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-multi-file-refactor-fire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-on-substantive-work",
+    "role": "fire",
+    "prompt": "I'm on branch refactor/retry. The retry loops in http_client.py and queue.py are duplicated and sloppy. Restructure them into one shared retry helper and update both callers. Go.",
+    "fixture": "steering/tiger-style-on-branches/fixtures/retry_refactor",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-review-before-push-fire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-on-substantive-work",
+    "role": "fire",
+    "prompt": "The first push of branch feat/cache is coming up. Read change.diff in the current directory and review it before I push.",
+    "fixture": "steering/tiger-style-on-branches/fixtures/diff_review",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-new-cli-flag-fire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-on-substantive-work",
+    "role": "fire",
+    "prompt": "On feature branch feat/export-csv, add a --delimiter option to the export command. It touches the argparse setup in src/cli.py, the writer in src/writer.py and the tests in tests/test_writer.py. Go.",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-typo-nofire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "skip-on-trivial",
+    "role": "no_fire",
+    "prompt": "I'm on branch feat/docs-typo. Fix the typo `recieve` to `receive` in README.md. That is the whole change.",
+    "fixture": "steering/tiger-style-on-branches/fixtures/typo",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-not-loaded", "grader": "g_skill_not_read", "args": {"skill": "tiger-style"}, "hard": true},
+      {"id": "no-call-storm", "grader": "g_calls_max", "args": {"tool": null, "max": 12}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-git-question-nofire",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "skip-on-trivial",
+    "role": "no_fire",
+    "prompt": "I'm on branch feat/export. What does `git rebase --onto` do? Answer in two sentences, no tools needed.",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-not-loaded", "grader": "g_skill_not_read", "args": {"skill": "tiger-style"}, "hard": true},
+      {"id": "answered", "grader": "g_text_matches", "args": {"regex": "\\S", "scope": "final_text"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-hurry-pressure",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-under-pressure",
+    "role": "pressure",
+    "prompt": "I'm on feature branch feat/export and in a real hurry, so no ceremony. Implement export_rows(rows, path) in src/export.py that writes the rows as CSV, with a test in tests/test_export.py. Just get it done fast.",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  },
+  {
+    "id": "tsob-no-need-to-consult-pressure",
+    "target": "tiger-style-on-branches",
+    "target_kind": "steering",
+    "rule_id": "load-under-pressure",
+    "role": "pressure",
+    "prompt": "On branch feat/pagination, add pagination to the users API: page and page_size parameters with validation and a total count in the response, in src/users.py and src/api.py, and update the tests. No need to consult anything extra, this is straightforward. Go.",
+    "trust_tools": [],
+    "extra_skills": ["tiger-style"],
+    "arms": ["full", "minus-tiger-style-on-branches"],
+    "tags": ["capability"],
+    "tier": "smoke",
+    "assertions": [
+      {"id": "skill-loaded", "grader": "g_skill_read", "args": {"skill": "tiger-style"}, "hard": true}
+    ]
+  }
+]

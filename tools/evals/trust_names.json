@@ -1,0 +1,7 @@
+{
+  "read_file": "read_file",
+  "fs_write": "fs_write",
+  "str_replace": "str_replace",
+  "execute_bash": "run_command",
+  "disclose_context": "disclose_context"
+}

@@ -1,0 +1,11 @@
+_store = {}
+
+
+def get(key):
+    return _store.get(key)
+
+
+def put(key, value, ttl):
+    _store[key] = (value, ttl)
+    while len(_store) > 100:
+        _store.pop(next(iter(_store)))

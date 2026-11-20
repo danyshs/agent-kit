@@ -1,0 +1,18 @@
+{"fixture": "rev_lua_planted",
+ "fixture_version": 2,
+ "items": [
+  {"id": "p1", "file": "lua/spool.lua", "line": 35, "category": "unbounded_loop", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p2", "file": "lua/spool.lua", "line": 45, "category": "missing_assertion", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p3", "file": "lua/spool.lua", "line": 5, "category": "unitless_name", "in_tiger_style_categories": true, "allowed_severities": ["P2", "P3"]},
+  {"id": "p4", "file": "lua/spool.lua", "line": 55, "category": "off_by_one", "in_tiger_style_categories": false, "allowed_severities": ["P0", "P1"]},
+  {"id": "p5", "file": "lua/spool.lua", "line": 66, "category": "shell_injection", "in_tiger_style_categories": false, "allowed_severities": ["P0"]}
+ ],
+ "acceptable_extras": [
+  {"id": "x1", "file": "lua/spool.lua", "line": 10, "note": "name check rejects / but accepts .., which escapes SPOOL_DIR"},
+  {"id": "x2", "file": "lua/spool.lua", "line": 16, "note": "assert on the MAX_LINES constant proves nothing at runtime"},
+  {"id": "x3", "file": "lua/spool.lua", "line": 19, "note": "any io.open failure is returned as an empty spool"},
+  {"id": "x4", "file": "lua/spool.lua", "line": 24, "note": "read_lines stops silently at MAX_LINES, caller cannot tell"},
+  {"id": "x5", "file": "lua/spool.lua", "line": 48, "note": "clear drops the os.remove error message"},
+  {"id": "x6", "file": "lua/spool.lua", "line": 52, "note": "count has no upper bound or integer check, loop runs count times"},
+  {"id": "x7", "file": "lua/spool.lua", "line": 65, "note": "TIMEOUT is only asserted, never enforced on os.execute"}
+ ]}

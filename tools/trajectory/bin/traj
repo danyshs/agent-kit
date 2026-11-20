@@ -1,0 +1,5 @@
+#!/usr/bin/env fish
+# thin wrapper: pinned interpreter, no project venv, quiet so stderr stays empty on success
+set root (path resolve (status dirname)/..)
+cd $root; or exit 2
+exec uv run --quiet --no-project --python 3.12 --with pytest python -m traj.cli $argv

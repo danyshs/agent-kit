@@ -1,0 +1,2 @@
+{"id":"1","payload":{"type":"turn_start","executionId":"exec-0001","turnId":"exec-0001"},"timestamp":"2026-11-14T10:00:00.000Z"}
+{"id":"2","payload":{"type":"turn_end","executionId":"exec-0001","stopReason":"end_turn"},"timestamp":"2026-11-14T10:00:01.000Z"}

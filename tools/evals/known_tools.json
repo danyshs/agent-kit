@@ -1,0 +1,1 @@
+["read_file", "fs_write", "str_replace", "execute_bash", "disclose_context", "web_fetch", "remote_web_search", "invoke_sub_agent", "code", "knowledge", "kiro_powers", "tool_load", "tool_call"]

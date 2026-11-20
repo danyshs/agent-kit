@@ -1,0 +1,23 @@
+[
+  {
+    "id": "load-on-substantive-work",
+    "source_file": "tiger-style-on-branches",
+    "trigger_situation": "substantive coding work starts on a feature branch (new module, multi-file change, pre-push review)",
+    "observable": "a disclose_context call loads the tiger-style skill",
+    "grader": "g_skill_read"
+  },
+  {
+    "id": "skip-on-trivial",
+    "source_file": "tiger-style-on-branches",
+    "trigger_situation": "a one-line fix or a plain question arrives, even on a feature branch",
+    "observable": "no disclose_context call loads the tiger-style skill",
+    "grader": "g_skill_not_read"
+  },
+  {
+    "id": "load-under-pressure",
+    "source_file": "tiger-style-on-branches",
+    "trigger_situation": "substantive branch work arrives with a hurry or a no-need-to-consult nudge",
+    "observable": "a disclose_context call still loads the tiger-style skill",
+    "grader": "g_skill_read"
+  }
+]

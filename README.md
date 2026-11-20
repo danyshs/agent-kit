@@ -187,9 +187,9 @@ To check the tools the optional features need, download and run the doctor scrip
 curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor | sh
 ```
 
-## Not in the kit yet: evals and trajectory analysis
+## Evals and trajectory analysis (`tools/`)
 
-I run two more tools on my own machine. Neither is packaged here yet: both still carry my own rules, test history and paths. Both now run on Claude Code first and still support [Kiro](https://kiro.dev)'s CLI, the agent I used before. Every eval result below came from Kiro runs; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
+Two more tools ship under `tools/` as a kit to fork, not a product: `tools/evals` and `tools/trajectory`. They ship without my ledgers, session logs or private rules. Swap in your own rules and cases; `tools/README.md` says how. Both run on Claude Code first and still support [Kiro](https://kiro.dev)'s CLI, the agent I used before. Every eval result below came from Kiro runs; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
 
 ### Evals: does a rule change what the agent does?
 
@@ -253,7 +253,7 @@ Until those exist, the tool shows where time and money went and when I had to st
 
 ### How the two fit together
 
-Evals ask whether a rule changes behaviour in a controlled test. Trajectories show what happens in real work. The plan is to join them: a correction that keeps recurring becomes a new eval case, and a rule that never shows up in real sessions and never changes a test result is the first one to cut. Both get packaged here once the Claude Code eval runner has a full suite of results behind it and the tools no longer depend on my own setup.
+Evals ask whether a rule changes behaviour in a controlled test. Trajectories show what happens in real work. The plan is to join them: a correction that keeps recurring becomes a new eval case, and a rule that never shows up in real sessions and never changes a test result is the first one to cut. The tiger-style suite in `tools/evals/skills/tiger-style` runs as shipped. The fish-shell and branch-review suites show how a rule suite is laid out; the rules they test stay private, so they don't run as shipped.
 
 ## Credits and licence
 

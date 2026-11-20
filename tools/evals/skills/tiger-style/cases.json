@@ -1,0 +1,1773 @@
+[
+  {
+    "id": "rev-py-planted",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style review to the change in this directory. Read change.diff and the files it adds (paths are relative to the current directory). Report each problem as exactly one line: FINDING <P0|P1|P2|P3> <file>:<line> <short text>. P0 is the worst. <file> is the path relative to the current directory and <line> is the 1-based line number in that file as it is on disk, not a line number inside change.diff. When you are done, print the line FINDINGS_DONE (with an S, exactly) as the last line. No other line may start with FINDING. The change is Python. Do not edit or run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "fixture": "skills/tiger-style/fixtures/rev_py_planted",
+    "assertions": [
+      {
+        "id": "recall",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_py_planted.json",
+          "mode": "recall",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "precision",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_py_planted.json",
+          "mode": "precision",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "severity",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_py_planted.json",
+          "mode": "severity",
+          "min": 1.0
+        },
+        "hard": true
+      },
+      {
+        "id": "citation",
+        "grader": "g_citation_valid",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "rev-fish-planted",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style review to the change in this directory. Read change.diff and the files it adds (paths are relative to the current directory). Report each problem as exactly one line: FINDING <P0|P1|P2|P3> <file>:<line> <short text>. P0 is the worst. <file> is the path relative to the current directory and <line> is the 1-based line number in that file as it is on disk, not a line number inside change.diff. When you are done, print the line FINDINGS_DONE (with an S, exactly) as the last line. No other line may start with FINDING. The change is fish shell. Do not edit or run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "fixture": "skills/tiger-style/fixtures/rev_fish_planted",
+    "assertions": [
+      {
+        "id": "recall",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_fish_planted.json",
+          "mode": "recall",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "precision",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_fish_planted.json",
+          "mode": "precision",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "severity",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_fish_planted.json",
+          "mode": "severity",
+          "min": 1.0
+        },
+        "hard": true
+      },
+      {
+        "id": "citation",
+        "grader": "g_citation_valid",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "rev-lua-planted",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style review to the change in this directory. Read change.diff and the files it adds (paths are relative to the current directory). Report each problem as exactly one line: FINDING <P0|P1|P2|P3> <file>:<line> <short text>. P0 is the worst. <file> is the path relative to the current directory and <line> is the 1-based line number in that file as it is on disk, not a line number inside change.diff. When you are done, print the line FINDINGS_DONE (with an S, exactly) as the last line. No other line may start with FINDING. The change is Lua. Do not edit or run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "fixture": "skills/tiger-style/fixtures/rev_lua_planted",
+    "assertions": [
+      {
+        "id": "recall",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_lua_planted.json",
+          "mode": "recall",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "precision",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_lua_planted.json",
+          "mode": "precision",
+          "min": 0.6
+        },
+        "hard": true
+      },
+      {
+        "id": "severity",
+        "grader": "g_planted_found",
+        "args": {
+          "planted": "planted/rev_lua_planted.json",
+          "mode": "severity",
+          "min": 1.0
+        },
+        "hard": true
+      },
+      {
+        "id": "citation",
+        "grader": "g_citation_valid",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "rev-py-clean",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Apply tiger style review to the change in this directory. Read change.diff and the files it adds (paths are relative to the current directory). Report each problem as exactly one line: FINDING <P0|P1|P2|P3> <file>:<line> <short text>. P0 is the worst. <file> is the path relative to the current directory and <line> is the 1-based line number in that file as it is on disk, not a line number inside change.diff. When you are done, print the line FINDINGS_DONE (with an S, exactly) as the last line. No other line may start with FINDING. If you find nothing to report, print only FINDINGS_DONE. Do not edit or run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "fixture": "skills/tiger-style/fixtures/rev_py_clean",
+    "assertions": [
+      {
+        "id": "clean_quiet",
+        "grader": "g_clean_control_quiet",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-py-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style. Write src/poller.py with a function poll_until(check: Callable[[], bool], now: Callable[[], int], sleep: Callable[[int], None], timeout, interval) -> bool. It calls check until it returns true or the timeout has elapsed, sleeping for the interval between calls, and returns whether check succeeded. Both durations are in milliseconds. Name the two duration parameters so each name starts with timeout and interval. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "length",
+        "grader": "g_function_length_max",
+        "args": {
+          "max_lines": 70
+        },
+        "hard": true
+      },
+      {
+        "id": "assertions",
+        "grader": "g_assertions_per_function_min",
+        "args": {
+          "min": 2
+        },
+        "hard": true
+      },
+      {
+        "id": "loops",
+        "grader": "g_loops_bounded",
+        "args": {},
+        "hard": true
+      },
+      {
+        "id": "units",
+        "grader": "g_units_in_names",
+        "args": {
+          "names": [
+            {
+              "identifier": "timeout",
+              "suffixes": [
+                "_ms",
+                "_s",
+                "_seconds"
+              ]
+            },
+            {
+              "identifier": "interval",
+              "suffixes": [
+                "_ms",
+                "_s",
+                "_seconds"
+              ]
+            }
+          ]
+        },
+        "hard": true
+      },
+      {
+        "id": "pyright",
+        "grader": "g_pyright_clean",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-py-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style. Write src/chunker.py with a function split_bytes(data: bytes, max_chunk) -> list[bytes] that cuts data into pieces of at most max_chunk bytes, plus a function join_chunks(chunks: list[bytes], max_total) -> bytes that joins them and refuses to return more than max_total bytes. Name the size parameters so each name starts with max_chunk and max_total. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "length",
+        "grader": "g_function_length_max",
+        "args": {
+          "max_lines": 70
+        },
+        "hard": true
+      },
+      {
+        "id": "assertions",
+        "grader": "g_assertions_per_function_min",
+        "args": {
+          "min": 2
+        },
+        "hard": true
+      },
+      {
+        "id": "loops",
+        "grader": "g_loops_bounded",
+        "args": {},
+        "hard": true
+      },
+      {
+        "id": "units",
+        "grader": "g_units_in_names",
+        "args": {
+          "names": [
+            {
+              "identifier": "max_chunk",
+              "suffixes": [
+                "_bytes",
+                "_gb"
+              ]
+            },
+            {
+              "identifier": "max_total",
+              "suffixes": [
+                "_bytes",
+                "_gb"
+              ]
+            }
+          ]
+        },
+        "hard": true
+      },
+      {
+        "id": "pyright",
+        "grader": "g_pyright_clean",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-py-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style. Write src/cache.py with two functions: put(cache: dict[str, bytes], key: str, value: bytes, max_total) -> None, which stores the value and evicts the oldest keys until the stored values fit in max_total bytes, and expire(stamps: dict[str, int], now: int, ttl) -> list[str], which returns the keys older than the ttl, in seconds. Name the parameters so each name starts with max_total and ttl. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "length",
+        "grader": "g_function_length_max",
+        "args": {
+          "max_lines": 70
+        },
+        "hard": true
+      },
+      {
+        "id": "assertions",
+        "grader": "g_assertions_per_function_min",
+        "args": {
+          "min": 2
+        },
+        "hard": true
+      },
+      {
+        "id": "loops",
+        "grader": "g_loops_bounded",
+        "args": {},
+        "hard": true
+      },
+      {
+        "id": "units",
+        "grader": "g_units_in_names",
+        "args": {
+          "names": [
+            {
+              "identifier": "max_total",
+              "suffixes": [
+                "_bytes",
+                "_gb"
+              ]
+            },
+            {
+              "identifier": "ttl",
+              "suffixes": [
+                "_ms",
+                "_s",
+                "_seconds"
+              ]
+            }
+          ]
+        },
+        "hard": true
+      },
+      {
+        "id": "pyright",
+        "grader": "g_pyright_clean",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-py-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "pressure",
+    "prompt": "Apply tiger style. Keep it as small as you can. Write src/bucket.py with a function take(tokens: int, last_refill: int, now: int, refill_interval, capacity: int) -> tuple[int, int] for a token bucket: it adds one token per refill interval (milliseconds) up to capacity and returns the new token count and the new refill time. Name the interval parameter so it starts with refill_interval. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "length",
+        "grader": "g_function_length_max",
+        "args": {
+          "max_lines": 30
+        },
+        "hard": true
+      },
+      {
+        "id": "assertions",
+        "grader": "g_assertions_per_function_min",
+        "args": {
+          "min": 2
+        },
+        "hard": true
+      },
+      {
+        "id": "loops",
+        "grader": "g_loops_bounded",
+        "args": {},
+        "hard": true
+      },
+      {
+        "id": "units",
+        "grader": "g_units_in_names",
+        "args": {
+          "names": [
+            {
+              "identifier": "refill_interval",
+              "suffixes": [
+                "_ms",
+                "_s",
+                "_seconds"
+              ]
+            }
+          ]
+        },
+        "hard": true
+      },
+      {
+        "id": "pyright",
+        "grader": "g_pyright_clean",
+        "args": {},
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-fish-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style. Write scripts/wait_for_file.fish defining a fish function wait_for_file that takes a path and a timeout, and polls once a second until the path exists or the timeout has passed. Return 0 if the file appeared and 1 if not. Name the timeout variable so it starts with timeout. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "wrote",
+        "grader": "g_tool_used",
+        "args": {
+          "tool": "fs_write"
+        },
+        "hard": true
+      },
+      {
+        "id": "unit_suffix",
+        "grader": "g_text_matches",
+        "args": {
+          "regex": "timeout_(ms|s|seconds)\\b",
+          "scope": "write_inputs"
+        },
+        "hard": true
+      },
+      {
+        "id": "no_unbounded_loop",
+        "grader": "g_text_absent",
+        "args": {
+          "regex": "while\\s+true",
+          "scope": "write_inputs"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "wr-lua-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style. Write lua/retry.lua returning a module with a function retry(fn, attempts, delay) that calls fn until it returns true or the attempts are used up, waiting for the delay between calls using a sleep function passed in as the fourth argument. The delay is in milliseconds. Name the delay parameter so it starts with delay. Use the write tool to create the file. Do not run anything.",
+    "trust_tools": [
+      "disclose_context"
+    ],
+    "arms": [
+      "with",
+      "without"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "wrote",
+        "grader": "g_tool_used",
+        "args": {
+          "tool": "fs_write"
+        },
+        "hard": true
+      },
+      {
+        "id": "unit_suffix",
+        "grader": "g_text_matches",
+        "args": {
+          "regex": "delay_(ms|s|seconds)\\b",
+          "scope": "write_inputs"
+        },
+        "hard": true
+      },
+      {
+        "id": "no_unbounded_loop",
+        "grader": "g_text_absent",
+        "args": {
+          "regex": "while\\s+true\\s+do",
+          "scope": "write_inputs"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply tiger style to this function: def add(a, b): return a + b",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Can you do a tiger-style review of the retry helper in utils.py? It is about 40 lines.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Use tigerstyle on my parser module before I merge it.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "I want better assertion density in my Python handlers. Where would you add asserts in def handle(req): return req['id']?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Check this loop against the bounded loops rule: while queue: item = queue.pop(); process(item)",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Does this function follow the NASA Power of Ten rules? def f(n): return f(n - 1) if n else 0",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Rename these to follow units-in-names: timeout = 30, size = 4096, delay = 2",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-dev-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Please apply tiger style when you write a function that parses key=value lines.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "How fast can a tiger run, and how long do tigers live in the wild?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What is the difference between Bengal and Siberian tigers at the zoo?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "My CSS style is not applying to the button: .btn { color: red } - why?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "How do I scope a style tag to one component in Vue?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Please review this snippet: def add(a, b): return a + b",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Review this function and tell me if it has any bugs: def avg(xs): return sum(xs) / len(xs)",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What is TigerBeetle and what does it use for its storage engine?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-dev-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What does Python's assert statement do when run with -O?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Tiger style please: sketch a small LRU cache class.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Give me a tiger-style review of this shell function: backup() { tar czf out.tgz $1; }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Run TigerStyle over this fish function: function greet; echo hi $argv; end",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "I would like higher assertion density in my Lua module, for example function split(s, sep) return {} end. What should I add?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Are these loops bounded in the TigerStyle sense? for (;;) { poll(); }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Review my C snippet against the Power of Ten rules: int f(int *p) { return *p; }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Apply the units-in-names rule to this config: retry_wait = 5, max_payload = 1048576.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Using tiger style, how should I structure a function that reads a config file and returns defaults?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Which tiger species is the largest, and where does it live?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Zoo trip question: what is the best time of day to see the tigers being fed?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "How do I change the font style of a heading in a stylesheet? h1 { font: bold 20px serif }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What is the difference between an inline style and an external stylesheet in HTML?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Can you look over this code? for i in range(3): print(i)",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Please do a code review of: def first(xs): return xs[0]",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Is TigerBeetle written in Zig, and how does its replication work?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What does PEP 8 say about line length and naming conventions?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Make sure the invariant on this Rust pop is checked on two code paths, not just one: fn pop(&mut self) -> u32 { self.v.pop().unwrap() }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Which of the Power of 10 rules does this Java loop break? while (true) { handle(next()); }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Every loop and queue should have a fixed upper bound. Audit this Go worker: for { job := <-ch; run(job) }",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Help me get under a 70-line function limit: my Python parse() is 120 lines and validates, transforms and writes.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Which of these should carry their unit in the name? cache_ttl = 300, buf = 65536, interval = 250",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "What invariants should I assert in this fish function? function rm_old; rm -rf $argv[1]/old; end",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "Rewrite this tree walk without recursion and with a hard cap on depth: def walk(n): return [n] + [x for c in n.kids for x in walk(c)]",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-pos-held2-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "fire",
+    "prompt": "¿Tiene este bucle un límite fijo? Quiero que cada bucle esté acotado: while not ok do ok = try() end",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "capability"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_loaded",
+        "grader": "g_skill_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-01",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What is the difference between assert! and debug_assert! in Rust?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-02",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Why does my loop never terminate? i = 10; while i > 0: i += 1",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-03",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "List the NASA Mars rover missions and their launch years.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-04",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Convert 300 seconds to milliseconds and 64 KiB to bytes.",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-05",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Is recursion or iteration faster in Python for computing a factorial?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-06",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "What line length do Black and ruff use by default?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-07",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Write a pytest unit test for def clamp(x, lo, hi): return max(lo, min(x, hi))",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  },
+  {
+    "id": "trig-neg-held2-08",
+    "target": "tiger-style",
+    "target_kind": "skill",
+    "role": "no_fire",
+    "prompt": "Tiger beetles are fast insects; how do they hunt, and where do they live?",
+    "trust_tools": [],
+    "arms": [
+      "with"
+    ],
+    "tags": [
+      "regression"
+    ],
+    "tier": "smoke",
+    "assertions": [
+      {
+        "id": "skill_not_loaded",
+        "grader": "g_skill_not_read",
+        "args": {
+          "skill": "tiger-style"
+        },
+        "hard": true
+      }
+    ]
+  }
+]

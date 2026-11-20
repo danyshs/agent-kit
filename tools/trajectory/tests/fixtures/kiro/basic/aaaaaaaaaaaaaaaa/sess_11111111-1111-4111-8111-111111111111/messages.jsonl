@@ -1,0 +1,21 @@
+{"id":"1","payload":{"type":"session_start"},"timestamp":"2026-11-14T10:00:00.000Z"}
+{"id":"2","payload":{"type":"user","documents":[{"displayName":"CANARY 0xDEADBEEF"}],"content":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:00:00.100Z"}
+{"id":"3","payload":{"type":"turn_start","executionId":"exec-0001","turnId":"exec-0001"},"timestamp":"2026-11-14T10:00:00.000Z"}
+{"id":"4","payload":{"type":"assistant","content":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:00:00.500Z"}
+{"id":"5","payload":{"type":"tool_call","toolCallId":"call-1","toolName":"read_file","args":{"path":"/CANARY 0xDEADBEEF/a.txt","offset":0},"executionId":"exec-0001","status":"approved"},"timestamp":"2026-11-14T10:00:01.000Z"}
+{"id":"6","payload":{"type":"tool_result","toolCallId":"call-1","success":true,"content":"CANARY 0xDEADBEEF","executionId":"exec-0001"},"timestamp":"2026-11-14T10:00:01.500Z"}
+{"id":"7","payload":{"type":"tool_call","toolCallId":"call-2","toolName":"execute_bash","args":{"command":"echo CANARY 0xDEADBEEF"},"executionId":"exec-0001","status":"approved"},"timestamp":"2026-11-14T10:00:02.000Z"}
+{"id":"8","payload":{"type":"tool_result","toolCallId":"call-2","success":true,"content":"CANARY 0xDEADBEEF\nExit Code: 1","executionId":"exec-0001"},"timestamp":"2026-11-14T10:00:02.100Z"}
+{"id":"9","payload":{"type":"tool_call","toolCallId":"call-3","toolName":"str_replace","args":{"path":"/CANARY 0xDEADBEEF/b.txt","oldStr":"CANARY 0xDEADBEEF"},"executionId":"exec-0001","status":"denied"},"timestamp":"2026-11-14T10:00:03.000Z"}
+{"id":"10","payload":{"type":"pending_interaction","toolCallId":"call-4","executionId":"exec-0001","consentRound":1,"question":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:00:04.000Z"}
+{"id":"11","payload":{"type":"interaction_resolved","toolCallId":"call-4","executionId":"exec-0001","consentRound":1,"outcome":"selected"},"timestamp":"2026-11-14T10:00:05.500Z"}
+{"id":"12","payload":{"type":"tool_call","toolCallId":"call-4","toolName":"execute_bash","args":{"command":"ls"},"executionId":"exec-0001","status":"approved"},"timestamp":"2026-11-14T10:00:05.600Z"}
+{"id":"13","payload":{"type":"tool_result","toolCallId":"call-4","success":true,"content":"CANARY 0xDEADBEEF\nExit Code: 0","executionId":"exec-0001"},"timestamp":"2026-11-14T10:00:05.700Z"}
+{"id":"14","payload":{"type":"usage_summary","executionId":"exec-0001","promptTurnSummaries":[{"unit":"credit","usage":0.5,"usedTools":["CANARY 0xDEADBEEF"]}],"requestIds":["r1","r2"]},"timestamp":"2026-11-14T10:00:06.000Z"}
+{"id":"15","payload":{"type":"turn_end","executionId":"exec-0001","stopReason":"end_turn"},"timestamp":"2026-11-14T10:00:06.500Z"}
+{"id":"16","payload":{"type":"user","documents":[{"displayName":"CANARY 0xDEADBEEF"}],"content":"CANARY 0xDEADBEEF"},"timestamp":"2026-11-14T10:01:00.000Z"}
+{"id":"17","payload":{"type":"turn_start","executionId":"exec-0002","turnId":"exec-0002"},"timestamp":"2026-11-14T10:01:00.100Z"}
+{"id":"18","payload":{"type":"tool_call","toolCallId":"call-5","toolName":"grep_search","args":{"query":"CANARY 0xDEADBEEF"},"executionId":"exec-0002","status":"approved"},"timestamp":"2026-11-14T10:01:01.000Z"}
+{"id":"19","payload":{"type":"tool_result","toolCallId":"call-5","success":false,"content":"CANARY 0xDEADBEEF","executionId":"exec-0002"},"timestamp":"2026-11-14T10:01:01.200Z"}
+{"id":"20","payload":{"type":"tool_call","toolCallId":"call-6","toolName":"read_file","args":{"path":"/CANARY 0xDEADBEEF/c.txt"},"executionId":"exec-0002","status":"approved"},"timestamp":"2026-11-14T10:01:02.000Z"}
+{"id":"21","payload":{"type":"turn_end","executionId":"exec-0002","stopReason":"end_turn"},"timestamp":"2026-11-14T10:01:03.000Z"}

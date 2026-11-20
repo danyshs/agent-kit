@@ -1,0 +1,63 @@
+"""Mirror remote archives into a local cache directory."""
+
+import os
+import subprocess
+import time
+import urllib.request
+
+CACHE_DIR = "/var/cache/mirror"
+CHUNK_BYTES = 65536
+TIMEOUT = 30
+RETRY_DELAY_S = 2
+
+
+def cache_path(name: str) -> str:
+    assert name, "cache_path: name is required"
+    assert "/" not in name, "cache_path: name is a bare file name"
+    return os.path.join(CACHE_DIR, name)
+
+
+def download(url: str, name: str) -> int:
+    assert url.startswith("https://"), "download: https only"
+    assert name.endswith(".tar"), "download: archives are tarballs"
+    written_bytes = 0
+    with urllib.request.urlopen(url, timeout=TIMEOUT) as response:
+        with open(cache_path(name), "wb") as out:
+            for _ in range(1_000_000):
+                chunk = response.read(CHUNK_BYTES)
+                if not chunk:
+                    break
+                out.write(chunk)
+                written_bytes += len(chunk)
+    return written_bytes
+
+
+def fetch(url: str, name: str) -> int:
+    assert url, "fetch: url is required"
+    assert name, "fetch: name is required"
+    while True:
+        try:
+            return download(url, name)
+        except OSError:
+            time.sleep(RETRY_DELAY_S)
+
+
+def prune(suffix: str) -> list[str]:
+    names = sorted(os.listdir(CACHE_DIR))
+    removed = [n for n in names if n.endswith(suffix)]
+    for name in removed:
+        os.remove(cache_path(name))
+    return removed
+
+
+def newest(names: list[str], count: int) -> list[str]:
+    assert count >= 0, "newest: count is not negative"
+    assert len(names) < 100_000, "newest: listing fits in memory"
+    ordered = sorted(names)
+    return ordered[-count - 1 :]
+
+
+def unpack(name: str, dest: str) -> None:
+    assert name.endswith(".tar"), "unpack: archives are tarballs"
+    assert dest, "unpack: dest is required"
+    subprocess.run(f"tar -xf {cache_path(name)} -C {dest}", shell=True, check=True)

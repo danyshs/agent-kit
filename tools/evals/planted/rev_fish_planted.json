@@ -1,0 +1,18 @@
+{"fixture": "rev_fish_planted",
+ "fixture_version": 2,
+ "items": [
+  {"id": "p1", "file": "scripts/rotate_logs.fish", "line": 26, "category": "unbounded_loop", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p2", "file": "scripts/rotate_logs.fish", "line": 43, "category": "missing_assertion", "in_tiger_style_categories": true, "allowed_severities": ["P0", "P1"]},
+  {"id": "p3", "file": "scripts/rotate_logs.fish", "line": 8, "category": "unitless_name", "in_tiger_style_categories": true, "allowed_severities": ["P2", "P3"]},
+  {"id": "p4", "file": "scripts/rotate_logs.fish", "line": 39, "category": "off_by_one", "in_tiger_style_categories": false, "allowed_severities": ["P0", "P1"]},
+  {"id": "p5", "file": "scripts/rotate_logs.fish", "line": 51, "category": "shell_injection", "in_tiger_style_categories": false, "allowed_severities": ["P0"]}
+ ],
+ "acceptable_extras": [
+  {"id": "x1", "file": "scripts/rotate_logs.fish", "line": 20, "note": "ls -tr output parsed by line, breaks on names with newlines"},
+  {"id": "x2", "file": "scripts/rotate_logs.fish", "line": 23, "note": "_wait_for_log is never called (dead code)"},
+  {"id": "x3", "file": "scripts/rotate_logs.fish", "line": 35, "note": "count is not bounded by MAX_LOGS"},
+  {"id": "x4", "file": "scripts/rotate_logs.fish", "line": 37, "note": "exit status of (_log_names) is ignored"},
+  {"id": "x5", "file": "scripts/rotate_logs.fish", "line": 45, "note": "mv status is never checked, loop continues after a failed archive"},
+  {"id": "x6", "file": "scripts/rotate_logs.fish", "line": 54, "note": "exit status of (_oldest 5) is ignored by the for loop"},
+  {"id": "x7", "file": "scripts/rotate_logs.fish", "line": 54, "note": "literal 5 is not derived from MAX_LOGS or named"}
+ ]}

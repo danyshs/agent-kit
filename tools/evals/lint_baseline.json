@@ -1,0 +1,7 @@
+[
+  {"rule": "missing-reference", "path": "skills/egm-bootstrap/SKILL.md", "message": "agents/bootstrap_orchestrator.md"},
+  {"rule": "missing-reference", "path": "skills/egm-brainstorm/SKILL.md", "message": "agents/synthesizer.md"},
+  {"rule": "missing-reference", "path": "skills/egm-review/SKILL.md", "message": "agents/comprehension.md"},
+  {"rule": "missing-reference", "path": "skills/egm-review/SKILL.md", "message": "agents/zoom_out.md"},
+  {"rule": "missing-reference", "path": "skills/egm-review-loop/SKILL.md", "message": "agents/synthesizer.md"}
+]
