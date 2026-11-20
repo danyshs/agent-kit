@@ -38,7 +38,7 @@ Exit 0 ok, 1 a run failed or its spend couldn't be counted, 2 refused.
 Checked (refuses with exit 2):
 - 1-4 rhinos, unique names (`[a-z0-9-]`, up to 32), every field present, each under 2000
   characters, label `frontier` or `control`.
-- Every cap, the Owl's too, between $0.50 and $10 (a start costs about $0.18).
+- Every cap, the Owl's too, between $0.50 and $10.
 - Every model at or below the ceiling, and the caps' total within what the budget line or the
   approved proposal has left after counted spend (the guards plugin's rules).
 - A device on any rhino needs `--user-present`, for `launch` and `owl`.

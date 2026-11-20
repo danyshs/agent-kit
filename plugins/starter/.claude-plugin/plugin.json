@@ -1,7 +1,7 @@
 {
   "name": "starter",
   "version": "0.1.0",
-  "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist and egm-helper.",
+  "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist, egm-helper and single-evidence-ledger.",
   "author": {
     "name": "danyshs"
   },
@@ -10,6 +10,7 @@
     "tiger-style-core",
     "debugging-discipline",
     "antagonist-protagonist",
-    "egm-helper"
+    "egm-helper",
+    "single-evidence-ledger"
   ]
 }

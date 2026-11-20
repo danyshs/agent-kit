@@ -27,9 +27,9 @@ claude plugin install egm@egm
 
 Then start a new Claude Code session. The rules load at the start of every session.
 
-To check everything installed, run `claude plugin list`. You should see `starter`, `tiger-style-core`, `debugging-discipline`, `antagonist-protagonist`, `egm-helper` and `egm`.
+To check everything installed, run `claude plugin list`. You should see `starter`, `tiger-style-core`, `debugging-discipline`, `antagonist-protagonist`, `egm-helper`, `single-evidence-ledger` and `egm`.
 
-Works on macOS and Linux. Windows is untested. Last tested Claude Code version: see `SNAPSHOT`. The Starter rules add about 3,000 tokens to every session.
+Works on macOS and Linux. Windows is untested. Last tested Claude Code version: see `SNAPSHOT`.
 
 ## How it works
 
@@ -73,9 +73,10 @@ Step by step:
 2. **You send a message.** With `attention-levels`, a script looks for `(ENABLE_LOW_ENERGY)`, `(ENABLE_MEDIUM_ENERGY)` or `(ENABLE_HIGH_ENERGY)`, saves the level for this session, and adds a line like `Attention level: Low` to your message. The rule tells Claude how many questions to ask at each level.
 3. **Claude writes or reviews code.** If you ask for tiger style, Claude loads the `tiger-style` skill and the skill for your language, if you installed it. The `debugging-discipline` rule is always on.
 4. **Before each tool call.** With `guards`, a script counts the tokens used this turn and stops at 10 million. Before a sub-agent starts, it also refuses models priced above Opus 5.5 and launches that would pass the budget you typed (`budget $5`).
-5. **A task needs a design decision.** The `egm-helper` rule makes Claude write a design doc first, using Google's EGM plugin. Before you approve it, the `antagonist-protagonist` rule has Claude start two reviewers: one argues against the doc, the other defends it. Claude shows you a table of their points and you decide.
-6. **Claude stops.** With `turn-sound`, a sound plays when Claude finishes or needs your permission. Each session gets its own sound, so you can tell parallel sessions apart.
-7. **You push a new branch.** If you copied the `pre-push` git hook into the repo, it asks whether a code review ran. Claude can't answer a terminal prompt, so it runs a tiger-style review first and then pushes with `REVIEW_DONE=1`.
+5. **A question only running things can answer.** With `rhino-owl`, Claude proposes a Rhino-Owl run instead of guessing; it starts only after you set or approve a budget. See [Rhino-Owl](#rhino-owl-finding-out-by-running-things).
+6. **A task needs a design decision.** The `egm-helper` rule makes Claude write a design doc first, using Google's EGM plugin. Before you approve it, the `antagonist-protagonist` rule has Claude start two reviewers: one argues against the doc, the other defends it. Claude shows you a table of their points and you decide.
+7. **Claude stops.** With `turn-sound`, a sound plays when Claude finishes or needs your permission. Each session gets its own sound, so you can tell parallel sessions apart.
+8. **You push a new branch.** If you copied the `pre-push` git hook into the repo, it asks whether a code review ran. Claude can't answer a terminal prompt, so it runs a tiger-style review first and then pushes with `REVIEW_DONE=1`.
 
 The other rules (`when-to-ask`, `agent-orchestration`, `single-evidence-ledger`, `code-voice`, `fork-pr-check`) have no scripts. They change how Claude behaves throughout the session.
 
@@ -83,7 +84,7 @@ The other rules (`when-to-ask`, `agent-orchestration`, `single-evidence-ledger`,
 
 | Plugin | Rule | Skill | Agents | Scripts, and when they run | Files it writes |
 |---|---|---|---|---|---|
-| `starter` | none | none | none | none. Installing it installs the four below. | none |
+| `starter` | none | none | none | none. Installing it installs the five Starter modules below. | none |
 | `tiger-style-core` | none | `tiger-style` (guide, principles, review checklist, TigerBeetle's original) | none | none | none |
 | `tiger-style-<language>` (9) | none | one per language | none | none | none |
 | `debugging-discipline` | yes | none | none | none | none |
@@ -119,6 +120,7 @@ Install any single module with `claude plugin install <name>@agent-kit`. Remove 
 | `debugging-discipline` | Seven debugging rules, each from a real mistake. For example: exit code 0 doesn't prove a check passed. |
 | `antagonist-protagonist` | Before you approve a plan, one agent argues against it and another defends it. You decide. |
 | `egm-helper` | When to write a design doc first, and how to run Google's EGM review on it. |
+| `single-evidence-ledger` | Each fact lives in one place, and long debugging keeps a `FACTS.md` file. See [FACTS.md](#factsmd-how-a-guess-becomes-a-fact). |
 
 ### Language rules for tiger-style (pick the ones you use)
 
@@ -133,7 +135,8 @@ Example: `claude plugin install tiger-style-python@agent-kit`
 | `turn-sound` | Plays a short sound when Claude is waiting for you. Each session gets its own sound. Needs jq and ffmpeg for the per-session sounds. Without them a Mac plays a system chime and Linux stays silent. |
 | `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions. `(ENABLE_HIGH_ENERGY)` makes it ask more. `(ENABLE_MEDIUM_ENERGY)` is the normal setting. Needs python3. |
 | `when-to-ask` | Claude just does safe, undoable work instead of asking "should I?", and runs all its checks before saying "done". |
-| `guards` | Limits spending. Type `budget $5` and Claude can't launch sub-agents past $5. It also refuses any model priced above Opus 5.5, and stops after 10 million tokens in one turn. Prices are per-token API prices. Does nothing if python3 is missing. |
+| `guards` | Limits spending. Type `budget $5` and Claude can't launch sub-agents or rhinos past $5. Without a budget, sub-agents still launch. It also refuses any model priced above Opus 5.5, and stops after 10 million tokens in one turn. Prices are per-token API prices. Does nothing if python3 is missing. |
+| `rhino-owl` | The Rhino-Owl model: throwaway prototype runs for questions only running things can answer. Needs `guards`, and won't start until you set or approve a budget. See [Rhino-Owl](#rhino-owl-finding-out-by-running-things). |
 | `pre-push` | A git hook that asks you to confirm a code review ran before the first push of a branch. It's a reminder, not a lock: it can't check that a review really happened. Needs a manual step, see [SETUP.md](SETUP.md#pre-push). |
 
 A status line (the bar under the prompt showing model, git branch, tokens and cost) is in `snippets/statusline.sh`. It isn't a plugin; [SETUP.md](SETUP.md#status-line) shows how to turn it on.
@@ -143,10 +146,32 @@ A status line (the bar under the prompt showing model, git branch, tokens and co
 | Module | What it does |
 |---|---|
 | `agent-orchestration` | When Claude should use sub-agents and when it shouldn't, and how to keep its memory uncluttered. |
-| `single-evidence-ledger` | Each fact lives in one place. For long debugging, a `FACTS.md` file of facts, guesses and tests. |
-| `rhino-owl` | For questions only running things can answer. Up to four throwaway prototype runs try different routes, some deliberately weaker for comparison, each with a dollar cap, a sandbox and none of your instructions. Then a fresh agent turns what they found, failures included, into ledger rows. Needs `guards`; costs real money per run (each start is about $0.18). |
 | `code-voice` | My taste in comments and code: short, explains why, no class hierarchies by default. Take it only if you share the taste. |
 | `fork-pr-check` | When working in a fork, makes Claude check the right repo before saying "there's no PR". |
+
+### FACTS.md: how a guess becomes a fact
+
+For debugging or research that runs past one session, Claude keeps one `FACTS.md` at the project root. Every row has an ID that is never reused, and rows are never deleted: a wrong one gets a new row saying so.
+
+| Table | Holds | Example |
+|---|---|---|
+| **F**, fact | Something observed, with its evidence: a file and line, a log line, command output, or what you saw. | F3: the driver drops reports over 64 bytes (`dmesg` line, saved to `evidence/`) |
+| **D**, derivation | A conclusion, the rows it rests on, and the rule that links them. | D1: from F3 and F5, the overflow is in the driver, not the app |
+| **H**, hypothesis | A guess, and what would settle it. Never cited as a fact. | H2: a smaller report size would fix it |
+| **T**, test | Written before the change: the one thing changed, the result if the guess is right, the result if it's wrong. | T4: set the report size to 32; works if H2 is right |
+
+One variable per test, because a test that changes two things settles neither. Handoffs and design docs cite row IDs instead of restating facts, so a note can't go stale.
+
+### Rhino-Owl: finding out by running things
+
+Some questions can't be answered by reading: the docs are thin, the forums disagree, or the truth is in code you can't see. For those, the Rhino-Owl model (ROM) replaces guessing with cheap, throwaway runs.
+
+1. **Claude proposes it**, names what it already read and why that didn't settle it, and shows a launch sheet: up to four routes, each with a model and a dollar cap. Nothing runs until you approve the budget.
+2. **Rhinos charge down one route each** with almost no planning. Each is a headless Claude run in its own git worktree, with a dollar cap, the OS sandbox, a deny list, and none of your rules or settings loaded. Some are *controls*: they try a route expected to be weaker, so comparisons rest on results rather than opinion. A failed rhino is a finding, not a waste.
+3. **The Owl** is a fresh run that starts after the rhinos finish. It reads what they built and how they failed, and writes rows for `FACTS.md`. It never picks a winner; that's yours.
+4. **The rhinos' code is thrown away.** Only the Owl's rows survive. If you then build the real thing, it's a normal task, with the rows as evidence.
+
+An optional module that needs `guards`. Every rhino is a paid run, and the `guards` budget counts its spend like any sub-agent's.
 
 ## Is it working?
 

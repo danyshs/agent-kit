@@ -11,7 +11,7 @@
     {
       "name": "starter",
       "source": "./plugins/starter",
-      "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist and egm-helper.",
+      "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist, egm-helper and single-evidence-ledger.",
       "category": "starter"
     },
     {
@@ -111,6 +111,12 @@
       "category": "optional"
     },
     {
+      "name": "rhino-owl",
+      "source": "./plugins/rhino-owl",
+      "description": "Exploration by throwaway prototypes: up to four capped, sandboxed runs try different routes, then a fresh agent turns what they found into ledger rows. Needs guards.",
+      "category": "optional"
+    },
+    {
       "name": "turn-sound",
       "source": "./plugins/turn-sound",
       "description": "A short sound when it's your turn, different for every session, so parallel sessions can be told apart by ear.",
@@ -132,13 +138,7 @@
       "name": "single-evidence-ledger",
       "source": "./plugins/single-evidence-ledger",
       "description": "One home per fact, no stale notes, and a FACTS.md ledger of facts, derivations, hypotheses and tests for long debugging work.",
-      "category": "extras"
-    },
-    {
-      "name": "rhino-owl",
-      "source": "./plugins/rhino-owl",
-      "description": "Exploration by throwaway prototypes: up to four capped, sandboxed runs try different routes, then a fresh agent turns what they found into ledger rows. Needs guards.",
-      "category": "extras"
+      "category": "starter"
     },
     {
       "name": "code-voice",
