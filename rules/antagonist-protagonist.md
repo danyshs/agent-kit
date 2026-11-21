@@ -21,7 +21,7 @@ Any doc about to be marked final or approved: specs, plans, rule files. There's 
 Launch the `antagonist` and `protagonist` agents that come with this module. Both are read-only. Each gets:
 
 - the doc and its git diff since the last approved version (the whole doc on a first version), pasted into the brief, not just their paths;
-- an explicit list of the files the doc cites. The agent reads only those, and ends with the files it needed and didn't have; one re-run with those added is fine. A fixed list misses some findings a free search would catch, but the agent spends far fewer turns re-reading what it gathered, and turns are where the cost is;
+- an explicit list of the files the doc cites. The agent reads only those, and ends with the files it needed and didn't have; one re-run with those added is fine. A fixed list misses some findings a free search would catch, but it should spend far fewer turns re-reading what it gathered, and turns are where the cost is. The list is an instruction to the agent, not a permission fence, so check the turn count;
 - none of your own reasoning: no conversation summary, no list of what you already fixed. If it matters, it belongs in the doc.
 
 The protagonist also gets the antagonist's pushbacks, as plain claims. Never your replies or verdicts. With no git history, hand over a list of the points added and say that you wrote it, since a hand-picked list lets you choose the targets.
