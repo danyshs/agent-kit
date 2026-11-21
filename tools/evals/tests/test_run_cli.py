@@ -14,7 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from lib.cli import main
-from lib.run import Invoker, InvokeResult
+from lib.run import Invoker, InvokeResult, load_run_limits
 from lib.run_cli import RUN_USAGE, RunArgs, parse_run_args, run_suite
 from tests.helpers import assertion, rule, steering_case, write_json
 from tests.helpers_run import (
@@ -91,18 +91,19 @@ class RunSuiteTest(TreeTest):
     def ledger_rows(self) -> list[dict[str, object]]:
         return [json.loads(line) for line in self.ledger.read_text().splitlines()]
 
-    def test_refused_without_probe_while_limits_are_null(self) -> None:
-        tier = {
+    def test_a_null_tier_cap_fails_to_load(self) -> None:
+        # every tier ships with numbers: a null cap is a broken limits file, not "unset"
+        full = {
             "repeats": 1,
-            "RUN_CREDITS_MAX": None,
-            "RUN_WALL_MS_MAX": None,
-            "SUITE_CREDITS_MAX": None,
+            "RUN_CREDITS_MAX": 0.1,
+            "RUN_WALL_MS_MAX": 1000,
+            "SUITE_CREDITS_MAX": 1.0,
         }
-        self.set_limits(tiers={"smoke": tier, "standard": tier})
-        lines, code = self.go(self.args(probe=False))
-        self.assertTrue(lines[-1].startswith("run: refused: budget limits unset"))
-        self.assertEqual(code, 1)
-        self.assertFalse(self.ledger.exists(), "a refused plan writes nothing")
+        for key in ("RUN_CREDITS_MAX", "RUN_WALL_MS_MAX", "SUITE_CREDITS_MAX"):
+            self.set_limits(tiers={"smoke": full, "standard": {**full, key: None}})
+            with self.assertRaisesRegex(ValueError, f"tiers.standard.{key} must be set"):
+                load_run_limits(self.root / "limits.json")
+            self.assertFalse(self.ledger.exists(), "nothing ran")
 
     def test_probe_run_appends_one_line_per_run_and_cleans_scratch(self) -> None:
         lines, code = self.go(self.args())

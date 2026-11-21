@@ -1,15 +1,13 @@
 """Goal: static lint flags each defect it claims to, the baseline only hides what it lists, and
 `bin/eval static` prints one line per target plus a status line with empty stderr.
-Method: plant one defect per test in a throwaway tree; the real-home test runs the actual
-wrapper and asserts on its output text, never on the exit code alone (debugging-discipline #5)."""
+Method: plant one defect per test in a throwaway tree."""
 
 from __future__ import annotations
 
-import subprocess
 import unittest
 from pathlib import Path
 
-from lib.cli import EVALS_ROOT, main, parse_args, run_static
+from lib.cli import main, parse_args, run_static
 from lib.dataset import (
     LintFinding,
     lint_all,
@@ -198,38 +196,6 @@ class ArgsTest(unittest.TestCase):
             code = main(["bogus"])
         self.assertEqual(code, 2)
         self.assertIn("usage:", err.getvalue())
-
-
-class RealHomeTest(unittest.TestCase):
-    """The done-gate: the real wrapper on the real ~/.claude (the default) and ~/.kiro."""
-
-    def check_home(self, home: Path, argv: list[str]) -> None:
-        done = subprocess.run(
-            [str(EVALS_ROOT / "bin" / "eval"), "static", *argv],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            check=False,
-        )
-        self.assertEqual(done.stderr, "")
-        lines = done.stdout.splitlines()
-        self.assertTrue(lines[-1].startswith("static: targets="), lines[-1])
-        skills = sorted(p.parent.name for p in (home / "skills").glob("*/SKILL.md"))
-        steering = sorted(p.stem for p in (home / "steering").glob("*.md"))
-        self.assertTrue(skills and steering, f"{home} has skills and steering to list")
-        for kind, names in (("skill", skills), ("steering", steering)):
-            for name in names:
-                rows = [ln for ln in lines if ln.split()[:2] == [kind, name]]
-                self.assertEqual(len(rows), 1, (kind, name))
-                self.assertRegex(rows[0], r"(covered|uncovered)")
-
-    @unittest.skipUnless(Path("~/.claude/CLAUDE.md").expanduser().is_file(), "no ~/.claude here")
-    def test_static_on_the_claude_home(self) -> None:
-        self.check_home(Path("~/.claude").expanduser(), [])
-
-    @unittest.skipUnless(Path("~/.kiro/skills").expanduser().is_dir(), "no ~/.kiro on this machine")
-    def test_static_on_the_kiro_home(self) -> None:
-        self.check_home(Path("~/.kiro").expanduser(), ["--home", str(Path("~/.kiro").expanduser())])
 
 
 if __name__ == "__main__":

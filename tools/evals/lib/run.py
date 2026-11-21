@@ -101,9 +101,9 @@ FAILURE_STATUSES: Final = ("harness_error", "timeout", "budget_abort")
 @dataclass(frozen=True)
 class TierLimits:
     repeats: int
-    run_credits_max: float | None
-    run_wall_ms_max: int | None
-    suite_credits_max: float | None
+    run_credits_max: float
+    run_wall_ms_max: int
+    suite_credits_max: float
 
 
 @dataclass(frozen=True)
@@ -272,20 +272,28 @@ def _optional_positive(raw: dict[str, object], key: str, *, whole: bool) -> floa
     return number
 
 
+def _required_positive(raw: dict[str, object], key: str, tier: str, *, whole: bool) -> float:
+    """A tier cap: every tier ships with numbers, so a null or missing cap is an error."""
+    number = _optional_positive(raw, key, whole=whole)
+    if number is None:
+        raise ValueError(f"limits.json: tiers.{tier}.{key} must be set; every tier has a cap")
+    assert number > 0, "a required cap is positive"
+    return number
+
+
 def _load_tier(name: str, raw: object, cost: str) -> TierLimits:
     """cost is the key word for the engine's unit: CREDITS (Kiro) or USD (Claude)."""
     entry = _obj(raw)
     if entry is None:
         raise ValueError(f"limits.json: tiers.{name} must be an object")
-    wall = _optional_positive(entry, "RUN_WALL_MS_MAX", whole=True)
     tier = TierLimits(
         repeats=_positive_int(entry, "repeats"),
-        run_credits_max=_optional_positive(entry, f"RUN_{cost}_MAX", whole=False),
-        run_wall_ms_max=None if wall is None else int(wall),
-        suite_credits_max=_optional_positive(entry, f"SUITE_{cost}_MAX", whole=False),
+        run_credits_max=_required_positive(entry, f"RUN_{cost}_MAX", name, whole=False),
+        run_wall_ms_max=int(_required_positive(entry, "RUN_WALL_MS_MAX", name, whole=True)),
+        suite_credits_max=_required_positive(entry, f"SUITE_{cost}_MAX", name, whole=False),
     )
     assert tier.repeats > 0, "repeats is positive"
-    assert tier.run_credits_max is None or tier.run_credits_max > 0, "credits cap is positive"
+    assert tier.run_credits_max > 0 and tier.run_wall_ms_max > 0, "run caps are positive"
     return tier
 
 
@@ -362,10 +370,10 @@ def plan_runs(
     assert tier in limits.tiers, "tier is defined in limits.json"
     assert model_id and cli_version, "model and cli version are pinned"
     tier_limits = limits.tiers[tier]
-    credits_max = limits.probe_credits_max if probe else (tier_limits.run_credits_max or 0.0)
+    credits_max = limits.probe_credits_max if probe else tier_limits.run_credits_max
     if not probe and model_id in limits.model_run_credits_max:
         credits_max = limits.model_run_credits_max[model_id]
-    wall_ms_max = limits.probe_wall_ms_max if probe else (tier_limits.run_wall_ms_max or 0)
+    wall_ms_max = limits.probe_wall_ms_max if probe else tier_limits.run_wall_ms_max
     specs: list[RunSpec] = []
     for case in cases:
         if case.tier not in (None, tier):
@@ -426,9 +434,6 @@ def check_budget(
         # --probe-run: the 0.2-credit cap is TOTAL across arms, enforced by the run loop
         return None if tier == "smoke" else "--probe-run is for the smoke tier only"
     tier_limits = limits.tiers[tier]
-    unset = tier_limits.run_credits_max is None or tier_limits.run_wall_ms_max is None
-    if unset or tier_limits.suite_credits_max is None:
-        return f"budget limits unset for tier {tier}; set them or use --probe-run"
     if model_id in limits.model_run_credits_max:
         return None  # suite cap = model run cap x planned runs: the ceiling by construction
     if ceiling.credits_max_total > tier_limits.suite_credits_max:

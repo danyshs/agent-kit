@@ -6,6 +6,7 @@ fails."""
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 import unittest
 from dataclasses import replace
@@ -266,6 +267,18 @@ class RenderAndCliTest(unittest.TestCase):
             self.assertTrue(lines[-1].startswith("report: "), lines[-1])
             usage, code = run_report(["nope"], root, home)
             self.assertEqual((code, len(usage)), (2, 1))
+
+    def test_no_ledger_directory_reports_no_ledger_and_exits_1(self) -> None:
+        # the public copy ships without ledger/: a fresh clone must say so, not crash
+        with tempfile.TemporaryDirectory() as tmp:
+            root, home = Path(tmp) / "evals", Path(tmp) / "home"
+            root.mkdir()
+            (home / "steering").mkdir(parents=True)
+            shutil.copy(EVALS_ROOT / "limits.json", root / "limits.json")
+            lines, code = run_report(["steering/shell", "--kiro-home", str(home)], root, home)
+            self.assertEqual(code, 1)
+            self.assertEqual(lines[-1], "report: suite=steering/shell no ledger")
+            self.assertFalse((root / "ledger").exists(), "a report never creates the ledger")
 
     def test_real_limits_json_carries_the_report_constants(self) -> None:
         limits = load_report_limits(EVALS_ROOT / "limits.json")

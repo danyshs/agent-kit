@@ -35,11 +35,11 @@
     "MODEL_RUN_USD_MAX": {"claude-opus-5-5": 1.5},
     "tiers": {
       "smoke": {"repeats": 1, "RUN_USD_MAX": 0.15, "RUN_WALL_MS_MAX": 120000, "SUITE_USD_MAX": 6.0},
-      "standard": {"repeats": 3, "RUN_USD_MAX": null, "RUN_WALL_MS_MAX": null, "SUITE_USD_MAX": null}
+      "standard": {"repeats": 3, "RUN_USD_MAX": 0.30, "RUN_WALL_MS_MAX": 300000, "SUITE_USD_MAX": 30.0}
     }
   },
   "tiers": {
     "smoke": {"repeats": 1, "RUN_CREDITS_MAX": 0.13, "RUN_WALL_MS_MAX": 120000, "SUITE_CREDITS_MAX": 9.5},
-    "standard": {"repeats": 3, "RUN_CREDITS_MAX": null, "RUN_WALL_MS_MAX": null, "SUITE_CREDITS_MAX": null}
+    "standard": {"repeats": 3, "RUN_CREDITS_MAX": 0.26, "RUN_WALL_MS_MAX": 300000, "SUITE_CREDITS_MAX": 30.0}
   }
 }

@@ -64,7 +64,7 @@ LIMITS = RunLimits(
     user_turns_max=20,
     probe_credits_max=0.2,
     probe_wall_ms_max=120000,
-    tiers={"smoke": TierLimits(1, None, None, None), "standard": TierLimits(3, 1.0, 60000, 10.0)},
+    tiers={"smoke": TierLimits(1, 0.1, 60000, 5.0), "standard": TierLimits(3, 1.0, 60000, 10.0)},
 )
 SHELL_CALLS = [(SHELL_OK_CALL, "execute_bash", "approved")]
 
@@ -467,9 +467,8 @@ class PlanTest(unittest.TestCase):
         specs = self.plan(probe=True)
         self.assertEqual({(s.credits_max, s.wall_ms_max) for s in specs}, {(0.2, 120000)})
 
-    def test_null_limits_refuse_unless_probe(self) -> None:
+    def test_probe_is_smoke_only(self) -> None:
         ceiling = worst_case(self.plan())
-        self.assertIn("unset", str(check_budget(ceiling, "smoke", LIMITS, probe=False)))
         self.assertIsNone(check_budget(ceiling, "smoke", LIMITS, probe=True))
         self.assertIn(
             "smoke",
@@ -484,12 +483,15 @@ class PlanTest(unittest.TestCase):
             "SUITE_CREDITS_MAX", str(check_budget(ceiling, "standard", tight, probe=False))
         )
 
-    def test_real_limits_json_loads_with_null_budgets(self) -> None:
+    def test_real_limits_json_loads_with_every_tier_capped(self) -> None:
         from lib.cli import EVALS_ROOT
 
         limits = load_run_limits(EVALS_ROOT / "limits.json")
         self.assertEqual(limits.probe_credits_max, 0.2)
         self.assertEqual(limits.probe_wall_ms_max, 120000)
+        self.assertEqual(limits.tiers["standard"], TierLimits(3, 0.26, 300000, 30.0))
+        claude = load_run_limits(EVALS_ROOT / "limits.json", "claude")
+        self.assertEqual(claude.tiers["standard"], TierLimits(3, 0.30, 300000, 30.0))
 
 
 class ArgvTest(unittest.TestCase):

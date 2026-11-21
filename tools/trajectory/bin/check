@@ -6,8 +6,8 @@ set root (path resolve (status dirname)/..)
 cd $root; or exit 2
 
 # floors: raise them when a stage adds files or tests, never lower them
-set py_files_min 24
-set tests_min 218
+set py_files_min 25
+set tests_min 223
 
 function fail
     echo "check: FAIL $argv[1]"
