@@ -189,7 +189,7 @@ curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor |
 
 ## Evals and trajectory analysis (`tools/`)
 
-Two more tools ship under `tools/` as a kit to fork, not a product: `tools/evals` and `tools/trajectory`. They ship without my ledgers, session logs or private rules. Swap in your own rules and cases; `tools/README.md` says how. Both run on Claude Code first and still support [Kiro](https://kiro.dev)'s CLI, the agent I used before. Every eval result below came from Kiro runs; the Claude Code runner has passed small test runs but no full suite yet. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
+Two more tools ship under `tools/` as a kit to fork, not a product: `tools/evals` and `tools/trajectory`. They ship without my ledgers, session logs or private rules. Swap in your own rules and cases; `tools/README.md` says how. Both run on Claude Code first and still support [Kiro](https://kiro.dev)'s CLI, the agent I used before. The first three results below came from Kiro runs; the last is a full suite on Claude Code. The method doesn't depend on the CLI. This section says how each tool works, what it has found so far, and what it can't tell you yet.
 
 ### Evals: does a rule change what the agent does?
 
@@ -226,6 +226,7 @@ On Claude Code each run is a headless `claude -p` that loads none of my own sett
 | fish-shell rule | 8 | Changed the answer in 1 case (the user asking for a heredoc). Watch. |
 | tiger-style-on-branches rule | 8 | 5 cases broken even with all rules on, so only 3 counted. Watch. |
 | tiger-style, value pilot | 4 cases, 24 runs | No difference: every arm passed every hidden test. On code review, the one hint was an unbounded fish loop found in 2 of 4 tiger-style runs and 0 of 2 without it. A count, not a result. |
+| tiger-style skill, Claude Code (claude-haiku-5-5, CLI 2.1.326, skill at agent-kit c1f8565, 2026-11-20) | 58 cases, 68 runs, $0.29 | Loaded for 11 of 14 prompts that used a trigger phrase, 0 of 8 that only named the topic, and 0 of 24 that shouldn't load it. Review: found 9 of 9 planted bugs of its kind with the skill, 6 of 9 without, with the same 2 false alarms on clean code either way. Writing: too few clean runs to compare. 6 runs loaded a language skill the setup didn't include and were left out. Watch. |
 
 The honest summary: so far no rule has been shown to help or to hurt, the suites are too small to say, and the static check shows my always-on rules are over their own context budget.
 
