@@ -8,13 +8,17 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import re
+import tempfile
 import unittest
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
+from unittest import mock
 
-from lib.cli import main
-from lib.run import Invoker, InvokeResult, load_run_limits
+from lib import isolation_probe
+from lib.cli import EVALS_ROOT, main
+from lib.run import CLAUDE_ENGINE, Invoker, InvokeResult, load_run_limits
 from lib.run_cli import RUN_USAGE, RunArgs, parse_run_args, run_suite
 from tests.helpers import assertion, rule, steering_case, write_json
 from tests.helpers_run import (
@@ -104,6 +108,30 @@ class RunSuiteTest(TreeTest):
             with self.assertRaisesRegex(ValueError, f"tiers.standard.{key} must be set"):
                 load_run_limits(self.root / "limits.json")
             self.assertFalse(self.ledger.exists(), "nothing ran")
+
+    def test_claude_suite_refused_when_the_isolation_probe_leaks(self) -> None:
+        # goal: a Claude suite whose probe reads the home canary starts no case; the plan line
+        # already counts the probe's attempts
+        real = json.loads((EVALS_ROOT / "limits.json").read_text(encoding="utf-8"))
+        self.set_limits(claude=real["claude"])
+        calls: list[list[str]] = []
+
+        def invoke(argv: list[str], env: Mapping[str, str], cwd: Path, t: float) -> InvokeResult:
+            if argv[1:] == ["--version"]:
+                return InvokeResult("2.1.326 (Claude Code)\n", "", 0, False, 1)
+            calls.append(argv)
+            path = re.search(r"cat (\S+)", argv[-1])
+            assert path, "the probe prompt names its canary"
+            return InvokeResult(Path(path.group(1)).read_text(encoding="utf-8"), "", 0, False, 1)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with mock.patch.object(isolation_probe, "CANARY_PARENT", Path(tmp)):
+                args = self.args(engine=CLAUDE_ENGINE, model_id="claude-haiku-5-5", probe=False)
+                lines, code = self.go(args, invoke)
+        self.assertTrue(lines[0].startswith("plan: engine=claude runs=4 "), lines[0])
+        self.assertTrue(lines[-1].startswith("run: refused: isolation probe: LEAK"), lines[-1])
+        self.assertEqual((code, len(calls)), (1, 1))
+        self.assertFalse(self.ledger.exists(), "no case ran")
 
     def test_probe_run_appends_one_line_per_run_and_cleans_scratch(self) -> None:
         lines, code = self.go(self.args())

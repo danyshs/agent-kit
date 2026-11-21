@@ -5,6 +5,7 @@ Method: replay crafted streams through a fake claude binary; assert on events an
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from collections.abc import Mapping
@@ -84,6 +85,9 @@ def turn_of(text: str) -> Turn:
 
 def kinds(events: tuple[Event, ...], kind: str) -> list[Event]:
     return [e for e in events if e.kind == kind]
+
+
+SETTINGS = '{"sandbox": {"enabled": true}}'  # argv tests only check it's passed through
 
 
 class BoundTest(unittest.TestCase):
@@ -209,7 +213,7 @@ class RunCaseTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.base = Path(self.tmp.name)
-        for name in ("home/skills/alpha", "cwd"):
+        for name in ("home/skills/alpha", "cwd", "cache"):
             (self.base / name).mkdir(parents=True)
 
     def tearDown(self) -> None:
@@ -227,6 +231,7 @@ class RunCaseTest(unittest.TestCase):
             LIMITS,
             self.base / "runs",
             fake_claude(streams, seen, envs),
+            cache_dir=self.base / "cache",
         )
         return record, view, seen, envs
 
@@ -282,20 +287,29 @@ class ArgvTest(unittest.TestCase):
     # goal: isolation flags always present; skills, rules and trust only when the arm has them
     def test_argv(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp)
-            bare = build_claude_argv(make_spec(), "-p is a prompt", None, 0.1, home)
+            home, cwd = Path(tmp) / "home", Path(tmp) / "cwd"
+            home.mkdir()
+            cwd.mkdir()
+            bare = build_claude_argv(
+                make_spec(), "-p is a prompt", None, 0.1, home, cwd=cwd, settings=SETTINGS
+            )
             (home / "skills").mkdir()
             (home / "steering").mkdir()
             (home / "steering" / "shell.md").write_text("use fish", encoding="utf-8")
             spec = make_spec(trust_tools=("Bash", "Read"))
-            full = build_claude_argv(spec, "go", SID, 0.1, home)
+            full = build_claude_argv(spec, "go", SID, 0.1, home, cwd=cwd, settings=SETTINGS)
+            real_home, real_cwd = os.path.realpath(home), os.path.realpath(cwd)
         joined = " ".join(bare)
         self.assertIn(" ".join(c for c in CLAUDE_ISOLATION if c), joined.replace("  ", " "))
         self.assertEqual(bare[-2:], ["--", "-p is a prompt"])
         for flag in ("--plugin-dir", "--append-system-prompt", "--resume", "--allowedTools"):
             self.assertNotIn(flag, bare)
             self.assertIn(flag, full)
-        self.assertEqual(full[full.index("--allowedTools") + 1], "Bash,Read")
+        self.assertEqual(
+            full[full.index("--allowedTools") + 1],
+            f"Bash,Read(/{real_cwd}/**),Read(/{real_home}/**)",
+        )
+        self.assertEqual(full[full.index("--settings") + 1], SETTINGS)
         self.assertIn("use fish", full[full.index("--append-system-prompt") + 1])
         self.assertEqual(full[full.index("--setting-sources") + 1], "")
         self.assertEqual(full[full.index("--permission-mode") + 1], "dontAsk")
@@ -325,7 +339,9 @@ class ClaudeMdRulesTest(unittest.TestCase):
             )
             assert not isinstance(built, str), built
             imports = (dest / "CLAUDE.md").read_text(encoding="utf-8")
-            argv = build_claude_argv(make_spec(), "go", None, 0.1, dest)
+            argv = build_claude_argv(
+                make_spec(), "go", None, 0.1, dest, cwd=dest, settings=SETTINGS
+            )
         self.assertEqual(imports, STEERING_ALWAYS)
         self.assertEqual(argv[argv.index("--add-dir") + 1], str(dest))
         self.assertNotIn("--append-system-prompt", argv)
@@ -357,6 +373,7 @@ class ClaudeMdRulesTest(unittest.TestCase):
             base = Path(tmp)
             (base / "home").mkdir()
             (base / "cwd").mkdir()
+            (base / "cache").mkdir()
             run_case(
                 make_spec(engine=CLAUDE_ENGINE),
                 make_case(),
@@ -365,6 +382,7 @@ class ClaudeMdRulesTest(unittest.TestCase):
                 LIMITS,
                 base / "runs",
                 fake_claude([stream(init(), result())], seen, envs),
+                cache_dir=base / "cache",
             )
         self.assertEqual(envs[0].get(CLAUDE_MD_ENV), "1")
         default = parse_run_args(["steering/shell"])

@@ -9,9 +9,9 @@ cd $root; or exit 2
 # reason in skip_reasons (no home set up, or a recorded capture not shipped), and at most
 # skipped_max may: the 3 real-home tests skip with an empty HOME; the export raises it for the
 # public copy, which ships without the recorded captures
-set py_files_min 35
-set typed_files_min 32 # pyright reads lib/ and tests/ only
-set tests_min 290 # passed, not run: skips don't count toward it
+set py_files_min 38
+set typed_files_min 35 # pyright reads lib/ and tests/ only
+set tests_min 308 # passed, not run: skips don't count toward it
 set skipped_max 27
 set skip_reasons ': (no \S+ here|no \S+ on this machine|tiger-style skill is not installed|recorded fixture \S+ not shipped)$'
 

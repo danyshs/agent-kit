@@ -21,6 +21,7 @@ from typing import Final, Literal, cast
 
 from lib.dataset import Arm, Case
 from lib.home import HomeDir
+from lib.isolation import isolated_environ, sandbox_settings, scoped_allowed_tools
 
 Verdict = Literal["PASS", "FAIL", "UNKNOWN"]
 RunStatus = Literal["ok", "timeout", "harness_error", "budget_abort", "denied_only", "contaminated"]
@@ -890,8 +891,8 @@ def outside_paths(events: tuple[Event, ...], cwd: str, home_dir: str) -> list[st
     assert cwd and home_dir, "both directories are given"
     found: list[str] = []
     for event in events:
-        if event.kind != "tool_call":
-            continue
+        if event.kind != "tool_call" or event.status == "denied":
+            continue  # a denied call outside is the isolation working, not a leak
         for path in event.paths:
             real = os.path.realpath(path if os.path.isabs(path) else os.path.join(real_cwd, path))
             if not (_is_inside(real_cwd, real) or _is_inside(real_home, real)):
@@ -901,9 +902,11 @@ def outside_paths(events: tuple[Event, ...], cwd: str, home_dir: str) -> list[st
 
 
 def foreign_skills(events: tuple[Event, ...], home_dir: Path) -> list[str]:
-    """Skills loaded that the arm's home does not hold: isolation failed."""
+    """Skills loaded that the arm's home does not hold: isolation failed. A load counts only when
+    its tool_result completed; a failed or unanswered call ("Unknown skill") loaded nothing."""
     shipped = {p.name for p in (home_dir / "skills").glob("*") if p.is_dir()}
-    loaded = [e.name for e in events if e.kind == "skill_read" and e.name]
+    done = {e.call_id for e in events if e.kind == "tool_result" and e.status == "completed"}
+    loaded = [e.name for e in events if e.kind == "skill_read" and e.name and e.call_id in done]
     found = sorted({name for name in loaded if name not in shipped})
     assert all(name not in shipped for name in found), "only names the home lacks"
     return found
@@ -913,6 +916,19 @@ def mark_contaminated(events: tuple[Event, ...], cwd: str, home_dir: str) -> boo
     flagged = bool(outside_paths(events, cwd, home_dir))
     assert isinstance(flagged, bool), "a yes/no answer"
     return flagged
+
+
+def contamination_note(
+    events: tuple[Event, ...], cwd: str, home_dir: str, foreign: list[str]
+) -> str:
+    """What made a run contaminated, kept in its note because its streams get deleted. Counts,
+    not paths: a path outside could itself be private."""
+    outside = len(outside_paths(events, cwd, home_dir))
+    denied = sum(1 for e in events if e.kind == "tool_call" and e.status == "denied" and e.paths)
+    note = f"contaminated: foreign_skills={','.join(foreign) or '-'} outside_paths={outside}"
+    note += f" denied_path_calls={denied}"
+    assert note.startswith("contaminated: "), "the note names its kind"
+    return note
 
 
 # ---------------------------------------------------------------- invocation
@@ -979,15 +995,25 @@ def claude_rules_text(home_dir: Path) -> str:
 
 
 def build_claude_argv(
-    spec: RunSpec, prompt: str, resume_id: str | None, budget_usd: float, home_dir: Path
+    spec: RunSpec,
+    prompt: str,
+    resume_id: str | None,
+    budget_usd: float,
+    home_dir: Path,
+    *,
+    cwd: Path,
+    settings: str,
 ) -> list[str]:
     """One headless claude -p turn. Skills load from the home as a plugin. Rules load from the
-    home's CLAUDE.md as memory when it has one, else as system prompt text. --allowedTools is
-    variadic, so "--" ends it before the prompt."""
+    home's CLAUDE.md as memory when it has one, else as system prompt text. File tools are
+    path-scoped and settings sandbox Bash (lib/isolation.py). --allowedTools is variadic, so
+    "--" ends it before the prompt."""
     assert spec.model_id and prompt.strip(), "model and prompt are non-empty"
     assert budget_usd > 0, "every turn carries a positive dollar cap"
+    assert settings.strip(), "every turn carries isolation settings"
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"]
     argv += ["--model", spec.model_id, "--max-budget-usd", f"{budget_usd:.4f}", *CLAUDE_ISOLATION]
+    argv += ["--settings", settings]
     if (home_dir / "skills").is_dir():
         argv += ["--plugin-dir", str(home_dir)]
     if (home_dir / "CLAUDE.md").is_file():
@@ -1000,7 +1026,7 @@ def build_claude_argv(
         assert CLAUDE_SESSION_ID_RE.fullmatch(resume_id), "resume id is a claude session id"
         argv += ["--resume", resume_id]
     if spec.trust_tools:
-        argv += ["--allowedTools", ",".join(spec.trust_tools)]
+        argv += ["--allowedTools", ",".join(scoped_allowed_tools(spec.trust_tools, cwd, home_dir))]
     argv += ["--", prompt]
     assert argv[-1] == prompt, "the prompt is the last argument"
     return argv
@@ -1120,23 +1146,30 @@ def run_case(
     limits: RunLimits,
     runs_dir: Path,
     invoke: Invoker = invoke_kiro,
+    cache_dir: Path | None = None,
 ) -> tuple[RunRecord, RunView]:
-    """All turns of one run. Returns the ungraded record and the view graders read."""
+    """All turns of one run. Returns the ungraded record and the view graders read. A Claude
+    run needs cache_dir: the one folder its sandboxed Bash may write outside cwd."""
     prompts = prompts_for(case, spec.arm)
     assert prompts and len(prompts) <= limits.user_turns_max, "1..MAX_USER_TURNS prompts"
     assert spec.engine in ENGINES and spec.wall_ms_max > 0, "engine pinned, wall limit set"
     home_dir, real_cwd = Path(home.dir_text).resolve(), cwd.resolve()
     claude = spec.engine == CLAUDE_ENGINE
-    env = (
-        {**os.environ, CLAUDE_MD_ENV: "1"} if claude else {**os.environ, "KIRO_HOME": str(home_dir)}
-    )
+    assert not claude or cache_dir is not None, "a Claude run has a cache dir"
+    settings = sandbox_settings(cache_dir) if cache_dir is not None else ""
+    if claude and cache_dir is not None:
+        env = {**isolated_environ(os.environ, cache_dir), CLAUDE_MD_ENV: "1"}
+    else:
+        env = {**os.environ, "KIRO_HOME": str(home_dir)}
     runs_dir.mkdir(parents=True, exist_ok=True)
     prog = _Progress()
     for turn_index, prompt in enumerate(prompts):
         remaining_ms = max(spec.wall_ms_max - prog.wall_ms, 1)
         if claude:
             left_usd = max(spec.credits_max - (prog.credits or 0.0), CLAUDE_BUDGET_USD_MIN)
-            argv = build_claude_argv(spec, prompt, prog.session_id, left_usd, home_dir)
+            argv = build_claude_argv(
+                spec, prompt, prog.session_id, left_usd, home_dir, cwd=real_cwd, settings=settings
+            )
         else:
             argv = build_argv(spec.model_id, spec.trust_tools, prompt, prog.session_id)
         result = invoke(argv, env, real_cwd, remaining_ms / MS_PER_S)
@@ -1158,9 +1191,12 @@ def _finish_run(
 ) -> tuple[RunRecord, RunView]:
     events = reindex(prog.events)
     contaminated = mark_contaminated(events, cwd, home_dir)
-    if spec.engine == CLAUDE_ENGINE and foreign_skills(events, Path(home_dir)):
+    foreign = foreign_skills(events, Path(home_dir)) if spec.engine == CLAUDE_ENGINE else []
+    if foreign:
         contaminated = True  # a skill the arm did not ship leaked in from the user's setup
     status = pick_status(prog.status, events, contaminated)
+    if status == "contaminated":
+        prog.note = contamination_note(events, cwd, home_dir, foreign)  # streams get deleted
     skills = tuple(sorted({e.name for e in events if e.kind == "skill_read" and e.name}))
     record = RunRecord(
         run_id=spec.run_id,

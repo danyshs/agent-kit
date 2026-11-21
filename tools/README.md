@@ -26,6 +26,13 @@ one line per run to a ledger under `evals/ledger/` (created on the first run).
 - **Add your own rule.** Put the rule in `~/.claude/steering/<name>.md` and import it from
   `~/.claude/CLAUDE.md` with a line `@~/.claude/steering/<name>.md`. Then copy
   `steering/shell/` to `steering/<name>/` and rewrite its cases for your rule.
+- **What a Claude run can see.** Only its throwaway project folder and home. File tools are
+  limited to those two folders, and the agent's shell runs in the CLI's sandbox with your home
+  folder denied for reading (uv's Python installs under `~/.local/share/uv` are the one exception).
+  Each suite starts with a quick check that a planted file in `~/.cache` can't be read; if it
+  can, the suite refuses to start. So a tool installed elsewhere under `~` can't run inside the
+  agent's shell, and the agent can't write to git. Graders run outside the sandbox and aren't
+  affected. Kiro runs don't get this isolation.
 - **What's skipped here.** 27 tests replay recorded CLI sessions or need a home with the skill
   installed. The recordings stay private, so those tests skip with a message saying what's missing.
   `bin/check` allows only those reasons, up to `skipped_max`; lower it as you add recordings.

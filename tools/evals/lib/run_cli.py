@@ -28,6 +28,7 @@ from lib.dataset import (
 )
 from lib.grade import append_run, graded
 from lib.home import HomeDir, build_home
+from lib.isolation_probe import PROBE_ATTEMPTS_MAX, probe_isolation
 from lib.run import (
     CLAUDE_DEFAULT_MODEL,
     CLAUDE_ENGINE,
@@ -37,6 +38,7 @@ from lib.run import (
     FAILURE_STATUSES,
     KIRO_ENGINE,
     TIERS,
+    Ceiling,
     Invoker,
     RunLimits,
     RunRecord,
@@ -212,6 +214,7 @@ def execute_spec(
     runs_dir = root / "runs"
     home_path = Path(tempfile.mkdtemp(prefix="evhome-", dir=SCRATCH_PARENT))
     cwd_path = Path(tempfile.mkdtemp(prefix="evcwd-", dir=SCRATCH_PARENT))
+    cache_path = Path(tempfile.mkdtemp(prefix="evcache-", dir=SCRATCH_PARENT))  # sandbox writes
     try:
         built = build_home(
             spec.arm,
@@ -232,11 +235,14 @@ def execute_spec(
         if case.fixture:
             shutil.copytree(root / case.fixture, cwd_path, dirs_exist_ok=True)
         pinned = replace(spec, home_sha=built.home_sha)
-        record, view = run_case(pinned, case, built, cwd_path, limits, runs_dir, invoke)
+        record, view = run_case(
+            pinned, case, built, cwd_path, limits, runs_dir, invoke, cache_dir=cache_path
+        )
         return graded(record, view, case.assertions, root)
     finally:
         shutil.rmtree(home_path, ignore_errors=True)
         shutil.rmtree(cwd_path, ignore_errors=True)
+        shutil.rmtree(cache_path, ignore_errors=True)
 
 
 def _run_line(record: RunRecord) -> str:
@@ -296,6 +302,20 @@ def run_specs(
     return lines, EXIT_BAD_RUN if aborted else EXIT_OK
 
 
+def with_isolation_probe(ceiling: Ceiling, specs: list[RunSpec], engine: str) -> Ceiling:
+    """A Claude suite also pays for the isolation probe's attempts, at the first run's caps."""
+    if engine != CLAUDE_ENGINE or not specs:
+        return ceiling
+    extra = PROBE_ATTEMPTS_MAX
+    out = Ceiling(
+        ceiling.run_count + extra,
+        ceiling.credits_max_total + extra * specs[0].credits_max,
+        ceiling.wall_ms_max_total + extra * specs[0].wall_ms_max,
+    )
+    assert out.run_count > ceiling.run_count, "the probe adds runs"
+    return out
+
+
 def run_suite(
     args: RunArgs, root: Path, invoke: Invoker = invoke_kiro, stamp_s: int | None = None
 ) -> tuple[list[str], int]:
@@ -330,6 +350,7 @@ def run_suite(
     )
     ceiling = worst_case(specs)
     assert ceiling.run_count == len(specs), "the ceiling counts every planned run"
+    ceiling = with_isolation_probe(ceiling, specs, args.engine)
     assert all(spec.engine == args.engine for spec in specs), "every run is pinned to one engine"
     plan_line = (
         f"plan: engine={args.engine} runs={ceiling.run_count} "
@@ -340,6 +361,10 @@ def run_suite(
     refusal = check_budget(ceiling, args.tier, run_limits, probe=args.probe, model_id=args.model_id)
     if refusal:
         return [plan_line, f"run: refused: {refusal}"], EXIT_BAD_RUN
+    if args.engine == CLAUDE_ENGINE:
+        probe_refusal = probe_isolation(specs[0], invoke)
+        if probe_refusal:
+            return [plan_line, f"run: refused: isolation probe: {probe_refusal}"], EXIT_BAD_RUN
     ledger_path = root / "ledger" / f"{args.suite_kind}_{args.suite_name}.jsonl"
     lines, code = run_specs(
         specs, {c.id: c for c in cases}, world, args, run_limits, root, ledger_path, invoke
