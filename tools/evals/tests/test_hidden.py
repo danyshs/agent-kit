@@ -202,7 +202,7 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(parse_summary("1 error in 0.1s"), {"errors": 1})
 
     def test_teardown_error_fails_even_when_every_test_passed(self) -> None:
-        verdict, evidence = hidden._verdict({"passed": 2, "errors": 1}, 2)  # pyright: ignore[reportPrivateUsage]
+        verdict, evidence = hidden._verdict({"passed": 2, "errors": 1}, 2)  # pyright: ignore[reportPrivateUsage]  # the verdict rule is private; this pins it directly
         self.assertEqual(verdict, "FAIL")
         self.assertIn("errors=1", evidence)
 

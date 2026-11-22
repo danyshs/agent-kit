@@ -21,7 +21,7 @@ from lib.dataset import (
     load_cases,
     parse_arm,
 )
-from lib.grade import GRADERS, Finding, Planted, _planted_verdict  # pyright: ignore[reportPrivateUsage]
+from lib.grade import GRADERS, Finding, Planted, _planted_verdict  # pyright: ignore[reportPrivateUsage]  # pinned directly; not part of the grader API
 from lib.home import HomeDir, build_home, plan_home
 from lib.report import run_spend
 from lib.run import prompts_for
