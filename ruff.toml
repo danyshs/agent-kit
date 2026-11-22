@@ -1,0 +1,7 @@
+# any ruff finding fails ./lint.sh; ruff has no warning level to downgrade to.
+# tools/* keep their own pyproject.toml settings, which ruff picks up for files under them.
+line-length = 100
+target-version = "py39"  # the plugin hooks run /usr/bin/python3, which is 3.9
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]

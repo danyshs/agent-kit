@@ -1,7 +1,8 @@
 """Rhino-Owl launcher: the only way a rhino or the Owl starts.
 
-Rule and usage: the rhino-owl rule and skill. Each rhino is a headless claude -p in its own worktree with a
-dollar cap, the OS sandbox and a deny list. Its transcript is copied where guard.py counts it.
+Rule and usage: the rhino-owl rule and skill. Each rhino is a headless claude -p in its own
+worktree with a dollar cap, the OS sandbox and a deny list. Its transcript is
+copied where guard.py counts it.
 
   rhino.py launch --sheet PATH --session ID [--user-present]
   rhino.py owl    --sheet PATH --session ID [--user-present]
@@ -17,6 +18,7 @@ only; runs on python 3.9.
 from __future__ import annotations
 
 import concurrent.futures
+import importlib.machinery
 import importlib.util
 import json
 import os
@@ -27,6 +29,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
+from typing import cast
 
 HERE = Path(__file__).resolve().parent
 GUARD_PATH = HERE / "guard.py"  # a copy of the guards plugin's, to share its budget rules
@@ -48,8 +51,13 @@ SETTING_SOURCES = ("user", "project", "local")  # what claude --setting-sources 
 RULE_FILES_MAX = 8
 RULE_FILE_BYTES_MAX = 64 * 1024
 RULE_BYTES_MAX = 128 * 1024  # all rule files together; each byte is paid on every rhino's start
-SANDBOX = {"sandbox": {"enabled": True, "autoAllowBashIfSandboxed": True,
-                       "allowUnsandboxedCommands": False}}
+SANDBOX = {
+    "sandbox": {
+        "enabled": True,
+        "autoAllowBashIfSandboxed": True,
+        "allowUnsandboxedCommands": False,
+    }
+}
 ALLOWED_TOOLS = "Bash Read Write Edit Glob Grep WebFetch WebSearch"
 DENIED_TOOLS = "Agent Bash(sudo:*) Bash(git push:*) Bash(defaults write:*)"
 CAPPED_SUBTYPE = "error_max_budget_usd"  # what claude -p reports when the cap stops it
@@ -75,6 +83,7 @@ class Rhino:
 @dataclass(frozen=True)
 class Scaffolding:
     """Opt-in instructions for rhinos; the default is none, the cheap start."""
+
     setting_sources: tuple[str, ...]
     rule_files: tuple[str, ...]
     rules_text: str  # the rule files joined, appended to each rhino's system prompt
@@ -104,6 +113,22 @@ def text_field(row: dict[str, object], key: str, where: str) -> str:
     return value.strip()
 
 
+def as_object(value: object) -> dict[str, object] | None:
+    """A JSON object with str keys, else None. The one place a dict's types are pinned."""
+    if not isinstance(value, dict):
+        return None
+    # isinstance proved a dict; JSON keys are already strings, str() only pins the type
+    untyped = cast("dict[object, object]", value)
+    return {str(key): item for key, item in untyped.items()}
+
+
+def as_list(value: object) -> list[object] | None:
+    """A JSON array, else None; its items stay unchecked objects."""
+    if not isinstance(value, list):
+        return None
+    return cast("list[object]", value)  # isinstance proved a list; object hides nothing
+
+
 def cap_field(row: dict[str, object], key: str, where: str) -> float:
     value = row.get(key)
     if isinstance(value, bool) or not isinstance(value, (int, float)):
@@ -115,17 +140,18 @@ def cap_field(row: dict[str, object], key: str, where: str) -> float:
 
 def parse_rhino(row: object, index: int) -> Rhino:
     where = f"rhino {index + 1}"
-    if not isinstance(row, dict):
+    record = as_object(row)
+    if record is None:
         raise Refused(f"{where}: not an object")
-    fields = {key: text_field(row, key, where) for key in ROW_FIELDS}
+    fields = {key: text_field(record, key, where) for key in ROW_FIELDS}
     if not NAME_PATTERN.fullmatch(fields["name"]):
         raise Refused(f"{where}: name must match {NAME_PATTERN.pattern}")
     if fields["label"] not in LABELS:
         raise Refused(f"{where}: label must be frontier or control")
-    device = row.get("device")
+    device = record.get("device")
     if device is not None and (not isinstance(device, str) or not NAME_PATTERN.fullmatch(device)):
         raise Refused(f"{where}: device must match {NAME_PATTERN.pattern}")
-    return Rhino(cap_usd=cap_field(row, "cap_usd", where), device=device, **fields)
+    return Rhino(cap_usd=cap_field(record, "cap_usd", where), device=device, **fields)
 
 
 def read_rule_file(path: Path) -> str:
@@ -141,11 +167,12 @@ def parse_scaffolding(raw: dict[str, object], base: Path) -> Scaffolding:
     value = raw.get("scaffolding")
     if value is None:
         return NO_SCAFFOLDING
-    if not isinstance(value, dict) or set(value) - {"setting_sources", "rule_files"}:
+    scaffolding = as_object(value)
+    if scaffolding is None or set(scaffolding) - {"setting_sources", "rule_files"}:
         raise Refused("scaffolding takes only setting_sources and rule_files")
-    sources: object = value.get("setting_sources", [])
-    files: object = value.get("rule_files", [])
-    if not isinstance(sources, list) or not isinstance(files, list):
+    sources = as_list(scaffolding.get("setting_sources", []))
+    files = as_list(scaffolding.get("rule_files", []))
+    if sources is None or files is None:
         raise Refused("scaffolding: setting_sources and rule_files are lists")
     names = [source for source in sources if isinstance(source, str) and source in SETTING_SOURCES]
     if len(names) != len(sources) or len(set(names)) != len(names):
@@ -165,12 +192,12 @@ def load_sheet(path: Path) -> Sheet:
     if not path.is_file() or path.stat().st_size > SHEET_BYTES_MAX:
         raise Refused(f"sheet {path} is missing or over {SHEET_BYTES_MAX} bytes")
     try:
-        raw = json.loads(path.read_text())
+        raw = as_object(json.loads(path.read_text()))
     except (json.JSONDecodeError, UnicodeDecodeError) as err:
         raise Refused(f"sheet {path} is not JSON: {err}") from err
-    if not isinstance(raw, dict) or not isinstance(raw.get("rhinos"), list):
+    rows = None if raw is None else as_list(raw.get("rhinos"))
+    if raw is None or rows is None:
         raise Refused("sheet needs a rhinos list")
-    rows = raw["rhinos"]
     if not 1 <= len(rows) <= RHINOS_MAX:
         raise Refused(f"sheet has {len(rows)} rhinos; allowed 1-{RHINOS_MAX}")
     rhinos = [parse_rhino(row, index) for index, row in enumerate(rows)]
@@ -179,8 +206,9 @@ def load_sheet(path: Path) -> Sheet:
         raise Refused("rhino names must be unique")
     owl_model = text_field(raw, "owl_model", "sheet")
     scaffolding = parse_scaffolding(raw, path.resolve().parent)
-    sheet = Sheet(path.resolve(), rhinos, owl_model, cap_field(raw, "owl_cap_usd", "sheet"),
-                  scaffolding)
+    sheet = Sheet(
+        path.resolve(), rhinos, owl_model, cap_field(raw, "owl_cap_usd", "sheet"), scaffolding
+    )
     assert len(sheet.rhinos) <= RHINOS_MAX
     return sheet
 
@@ -189,11 +217,12 @@ def load_sheet(path: Path) -> Sheet:
 
 
 def load_guard() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("rom_guard", GUARD_PATH)
-    assert spec is not None and spec.loader is not None, GUARD_PATH
+    loader = importlib.machinery.SourceFileLoader("rom_guard", str(GUARD_PATH))
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    assert spec is not None, GUARD_PATH
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module  # dataclasses look the module up while building classes
-    spec.loader.exec_module(module)
+    loader.exec_module(module)
     return module
 
 
@@ -234,21 +263,47 @@ def check_budget(main_path: Path, models: list[str], total_usd: float) -> str:
 
 
 def repo_root(start: Path) -> Path:
-    out = subprocess.run(["git", "-C", str(start), "rev-parse", "--show-toplevel"],
-                         capture_output=True, text=True, timeout=GIT_TIMEOUT_S, check=False)
+    out = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        timeout=GIT_TIMEOUT_S,
+        check=False,
+    )
     if out.returncode != 0:
         raise Refused(f"{start} is not inside a git repo")
     return Path(out.stdout.strip())
 
 
-def claude_command(model: str, cap_usd: float, worktree: str | None, prompt: str,
-                   scaffolding: Scaffolding = NO_SCAFFOLDING) -> list[str]:
+def claude_command(
+    model: str,
+    cap_usd: float,
+    worktree: str | None,
+    prompt: str,
+    scaffolding: Scaffolding = NO_SCAFFOLDING,
+) -> list[str]:
     sources = ",".join(scaffolding.setting_sources)  # "" loads nothing: the cheap default
-    command = [os.environ.get("ROM_CLAUDE_BIN", "claude"), "-p", "--model", model,
-               "--max-budget-usd", f"{cap_usd:.2f}", "--output-format", "json",
-               "--permission-mode", "acceptEdits", "--allowedTools", ALLOWED_TOOLS,
-               "--disallowedTools", DENIED_TOOLS, "--settings", json.dumps(SANDBOX),
-               "--setting-sources", sources, *MCP_OFF]
+    command = [
+        os.environ.get("ROM_CLAUDE_BIN", "claude"),
+        "-p",
+        "--model",
+        model,
+        "--max-budget-usd",
+        f"{cap_usd:.2f}",
+        "--output-format",
+        "json",
+        "--permission-mode",
+        "acceptEdits",
+        "--allowedTools",
+        ALLOWED_TOOLS,
+        "--disallowedTools",
+        DENIED_TOOLS,
+        "--settings",
+        json.dumps(SANDBOX),
+        "--setting-sources",
+        sources,
+        *MCP_OFF,
+    ]
     if scaffolding.rules_text:
         command += ["--append-system-prompt", scaffolding.rules_text]
     if worktree is not None:
@@ -259,21 +314,31 @@ def claude_command(model: str, cap_usd: float, worktree: str | None, prompt: str
 def run_session(command: list[str], cwd: Path) -> dict[str, object]:
     """Run one claude -p; 'status' is set only when the run itself says capped or crashed."""
     try:
-        out = subprocess.run(command, cwd=cwd, capture_output=True, text=True,
-                             stdin=subprocess.DEVNULL, timeout=RUN_TIMEOUT_S, check=False)
+        out = subprocess.run(
+            command,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            stdin=subprocess.DEVNULL,
+            timeout=RUN_TIMEOUT_S,
+            check=False,
+        )
     except subprocess.TimeoutExpired:
         return {"exit": None, "subtype": "timeout", "status": "crashed"}
     result: dict[str, object] = {"exit": out.returncode}
     lines = out.stdout.strip().splitlines()
     try:
-        parsed = json.loads(lines[-1]) if lines else None
+        parsed = as_object(json.loads(lines[-1])) if lines else None
     except json.JSONDecodeError:
         parsed = None
-    if not isinstance(parsed, dict):
+    if parsed is None:
         result.update(subtype="no-json", status="crashed", stderr=out.stderr[-2000:])
         return result
-    result.update(subtype=parsed.get("subtype"), cost_usd=parsed.get("total_cost_usd"),
-                  session=parsed.get("session_id"))
+    result.update(
+        subtype=parsed.get("subtype"),
+        cost_usd=parsed.get("total_cost_usd"),
+        session=parsed.get("session_id"),
+    )
     if parsed.get("subtype") == CAPPED_SUBTYPE:
         result["status"] = "capped"
     elif out.returncode != 0 or parsed.get("is_error"):
@@ -299,11 +364,18 @@ def copy_transcript(main_path: Path, session: object) -> str | None:
 
 
 def rhino_prompt(rhino: Rhino, user_present: bool) -> str:
-    kind = ("a route expected to be weaker, run on purpose as a baseline; still do it properly"
-            if rhino.label == "control" else "the best current guess")
-    device = (f"\nDevice: {rhino.device}. The user is present. Only commands that don't change its"
-              " lasting state: no settings, SELinux or reboot changes, and remove nothing that"
-              " isn't your own app." if rhino.device else "")
+    kind = (
+        "a route expected to be weaker, run on purpose as a baseline; still do it properly"
+        if rhino.label == "control"
+        else "the best current guess"
+    )
+    device = (
+        f"\nDevice: {rhino.device}. The user is present. Only commands that don't change its"
+        " lasting state: no settings, SELinux or reboot changes, and remove nothing that"
+        " isn't your own app."
+        if rhino.device
+        else ""
+    )
     assert not rhino.device or user_present
     return (
         "You are a rhino in a Rhino-Owl exploration. Build fast. Don't plan or write docs beyond"
@@ -324,12 +396,13 @@ def rhino_prompt(rhino: Rhino, user_present: bool) -> str:
 def logged_status(log: Path) -> str:
     last = log.read_text().strip().splitlines()[-1:] if log.is_file() else []
     if last and last[0] in ("STATUS: done", "STATUS: waiting-human"):
-        return last[0][len("STATUS: "):]
+        return last[0][len("STATUS: ") :]
     return "unknown"
 
 
-def finish_rhino(root: Path, main_path: Path, rhino: Rhino,
-                 result: dict[str, object]) -> dict[str, object]:
+def finish_rhino(
+    root: Path, main_path: Path, rhino: Rhino, result: dict[str, object]
+) -> dict[str, object]:
     worktree = root / ".claude" / "worktrees" / f"rom-{rhino.name}"
     log = worktree / "rhino.log"
     if "status" in result and worktree.is_dir():
@@ -337,18 +410,29 @@ def finish_rhino(root: Path, main_path: Path, rhino: Rhino,
             handle.write(f"STATUS: {result['status']}\n")
     if "status" not in result:
         result["status"] = logged_status(log)
-    result.update(name=rhino.name, label=rhino.label, worktree=str(worktree), log=str(log),
-                  transcript=copy_transcript(main_path, result.get("session")))
+    result.update(
+        name=rhino.name,
+        label=rhino.label,
+        worktree=str(worktree),
+        log=str(log),
+        transcript=copy_transcript(main_path, result.get("session")),
+    )
     assert result["status"] in ("done", "waiting-human", "capped", "crashed", "unknown")
     return result
 
 
-def run_group(root: Path, main_path: Path, group: list[Rhino], user_present: bool,
-              scaffolding: Scaffolding) -> list[dict[str, object]]:
-    results = []
+def run_group(
+    root: Path, main_path: Path, group: list[Rhino], user_present: bool, scaffolding: Scaffolding
+) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
     for rhino in group:  # one device, one rhino at a time
-        command = claude_command(rhino.model, rhino.cap_usd, f"rom-{rhino.name}",
-                                 rhino_prompt(rhino, user_present), scaffolding)
+        command = claude_command(
+            rhino.model,
+            rhino.cap_usd,
+            f"rom-{rhino.name}",
+            rhino_prompt(rhino, user_present),
+            scaffolding,
+        )
         results.append(finish_rhino(root, main_path, rhino, run_session(command, root)))
     return results
 
@@ -369,11 +453,13 @@ def groups_of(rhinos: list[Rhino]) -> list[list[Rhino]]:
 def scaffolding_notice(scaffolding: Scaffolding) -> str:
     sources = ",".join(scaffolding.setting_sources) or "none"
     size = len(scaffolding.rules_text.encode())
-    return (f"rhino: NOTICE scaffolding on (setting sources: {sources}; "
-            f"{len(scaffolding.rule_files)} rule files, {size} bytes). Rhinos are meant to start "
-            "bare, which is what keeps them cheap. Every rhino now pays for this at startup, out "
-            "of its own cap; a rhino whose cap goes mostly on startup stops before it builds much. "
-            "Raise cap_usd to make up for it.")
+    return (
+        f"rhino: NOTICE scaffolding on (setting sources: {sources}; "
+        f"{len(scaffolding.rule_files)} rule files, {size} bytes). Rhinos are meant to start "
+        "bare, which is what keeps them cheap. Every rhino now pays for this at startup, out "
+        "of its own cap; a rhino whose cap goes mostly on startup stops before it builds much. "
+        "Raise cap_usd to make up for it."
+    )
 
 
 def launch(sheet: Sheet, session: str, user_present: bool) -> int:
@@ -391,24 +477,30 @@ def launch(sheet: Sheet, session: str, user_present: bool) -> int:
         print(scaffolding_notice(sheet.scaffolding), file=sys.stderr)
     results: list[dict[str, object]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=RHINOS_MAX) as pool:
-        futures = [pool.submit(run_group, root, main_path, group, user_present, sheet.scaffolding)
-                   for group in groups_of(sheet.rhinos)]
+        futures = [
+            pool.submit(run_group, root, main_path, group, user_present, sheet.scaffolding)
+            for group in groups_of(sheet.rhinos)
+        ]
         for future in futures:
             results.extend(future.result())
     assert len(results) == len(sheet.rhinos)
     results_path = sheet.path.with_suffix(".results.json")
     recorded: dict[str, object] = {"rhinos": results}
     if sheet.scaffolding != NO_SCAFFOLDING:  # the Owl should know the rhinos didn't start bare
-        recorded["scaffolding"] = {"setting_sources": list(sheet.scaffolding.setting_sources),
-                                   "rule_files": list(sheet.scaffolding.rule_files)}
+        recorded["scaffolding"] = {
+            "setting_sources": list(sheet.scaffolding.setting_sources),
+            "rule_files": list(sheet.scaffolding.rule_files),
+        }
     results_path.write_text(json.dumps(recorded, indent=2) + "\n")
     for result in results:
         print(f"rhino: {result['name']} {result['status']} ${result.get('cost_usd')}")
     print(f"rhino: results in {results_path}")
     uncounted = [result["name"] for result in results if result["transcript"] is None]
     if uncounted:
-        print(f"rhino: transcripts not found for {uncounted}; their spend is NOT counted by"
-              " guard.py", file=sys.stderr)
+        print(
+            f"rhino: transcripts not found for {uncounted}; their spend is NOT counted by guard.py",
+            file=sys.stderr,
+        )
     crashed = any(result["status"] == "crashed" for result in results)
     return 1 if crashed or uncounted else 0
 
@@ -425,9 +517,11 @@ def owl(sheet: Sheet, session: str, user_present: bool) -> int:
     root = repo_root(sheet.path.parent)
     main_path = main_transcript(session)
     print(f"rhino: owl {check_budget(main_path, [sheet.owl_model], sheet.owl_cap_usd)}")
-    prompt = (OWL_BRIEF_PATH.read_text() + f"\n\nLaunch sheet: {sheet.path}\n"
-              f"Rhino results: {results_path}\nEvidence folder: {evidence_dir(sheet)}\n"
-              f"Ledger rows go to: {sheet.path.parent / 'proposed-ledger.md'}\n")
+    prompt = (
+        OWL_BRIEF_PATH.read_text() + f"\n\nLaunch sheet: {sheet.path}\n"
+        f"Rhino results: {results_path}\nEvidence folder: {evidence_dir(sheet)}\n"
+        f"Ledger rows go to: {sheet.path.parent / 'proposed-ledger.md'}\n"
+    )
     result = run_session(claude_command(sheet.owl_model, sheet.owl_cap_usd, None, prompt), root)
     result.setdefault("status", "done")
     result["transcript"] = copy_transcript(main_path, result.get("session"))
@@ -436,7 +530,9 @@ def owl(sheet: Sheet, session: str, user_present: bool) -> int:
     results_path.write_text(json.dumps(recorded, indent=2) + "\n")
     print(f"rhino: owl {result['status']} ${result.get('cost_usd')}")
     if result["transcript"] is None:
-        print("rhino: owl transcript not found; its spend is NOT counted by guard.py", file=sys.stderr)
+        print(
+            "rhino: owl transcript not found; its spend is NOT counted by guard.py", file=sys.stderr
+        )
     return 0 if result["status"] == "done" and result["transcript"] is not None else 1
 
 
@@ -444,8 +540,13 @@ def owl(sheet: Sheet, session: str, user_present: bool) -> int:
 
 
 def git(root: Path, *args: str) -> bool:
-    out = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True,
-                         timeout=GIT_TIMEOUT_S, check=False)
+    out = subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        timeout=GIT_TIMEOUT_S,
+        check=False,
+    )
     if out.returncode != 0:
         print(f"rhino: git {' '.join(args)} failed: {out.stderr.strip()}", file=sys.stderr)
     return out.returncode == 0
@@ -458,8 +559,9 @@ def evidence_dir(sheet: Sheet) -> Path:
 def remove(sheet: Sheet) -> int:
     # one-way door: refuse unless the Owl finished and left evidence behind
     results_path = sheet.path.with_suffix(".results.json")
-    owl_result = json.loads(results_path.read_text()).get("owl") if results_path.is_file() else None
-    if not isinstance(owl_result, dict) or owl_result.get("status") != "done":
+    results = as_object(json.loads(results_path.read_text())) if results_path.is_file() else None
+    owl_result = None if results is None else as_object(results.get("owl"))
+    if owl_result is None or owl_result.get("status") != "done":
         raise Refused("the Owl has not finished (status done) for this sheet; nothing removed")
     if not evidence_dir(sheet).is_dir():
         raise Refused(f"no evidence folder at {evidence_dir(sheet)}; nothing removed")
@@ -477,8 +579,10 @@ def remove(sheet: Sheet) -> int:
 
 # -- entry
 
-USAGE = ("usage: rhino.py launch|owl --sheet PATH --session ID [--user-present]\n"
-         "       rhino.py remove --sheet PATH")
+USAGE = (
+    "usage: rhino.py launch|owl --sheet PATH --session ID [--user-present]\n"
+    "       rhino.py remove --sheet PATH"
+)
 
 
 def parse_args(argv: list[str]) -> dict[str, str]:

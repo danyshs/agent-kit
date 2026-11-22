@@ -22,8 +22,10 @@ FIELD_CHARS_MAX = 2000
 GIT_TIMEOUT_S = 5
 TEXT_FIELDS = ("session", "ask-point", "options", "choice", "reason")
 YES_NO_FIELDS = ("spec-edited", "product-facing")
-USAGE = ("usage: lowlog.py append --repo PATH --session ID --ask-point TEXT --options TEXT "
-         "--choice TEXT --reason TEXT --spec-edited yes|no --product-facing yes|no")
+USAGE = (
+    "usage: lowlog.py append --repo PATH --session ID --ask-point TEXT --options TEXT "
+    "--choice TEXT --reason TEXT --spec-edited yes|no --product-facing yes|no"
+)
 
 
 class BadArgs(Exception):
@@ -61,8 +63,13 @@ def parse(argv: list[str]) -> dict[str, str]:
 
 def top_level(repo: str) -> Path:
     path = Path(repo).resolve()
-    done = subprocess.run(["git", "-C", str(path), "rev-parse", "--show-toplevel"],
-                          capture_output=True, text=True, timeout=GIT_TIMEOUT_S, check=False)
+    done = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+        timeout=GIT_TIMEOUT_S,
+        check=False,
+    )
     if done.returncode != 0 or Path(done.stdout.strip()).resolve() != path:
         raise BadArgs(f"--repo {repo} is not a git top level")
     return path

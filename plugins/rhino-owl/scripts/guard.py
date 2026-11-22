@@ -5,7 +5,8 @@ guard.py agent  -> on Agent calls: model ceiling, then the user's budget (typed,
 guard.py turn   -> on every main-agent call: the turn cap (10M tokens by default).
 
 Exit 0 allows, exit 2 refuses with one stderr line. The hooks.json wrapper turns any
-other status into 2. A crash refuses an Agent launch but lets other tool calls through. Standard library only; runs on python 3.9.
+other status into 2. A crash refuses an Agent launch but lets other tool calls through.
+Standard library only; runs on python 3.9.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 MEGABYTE = 1024 * 1024
 MAIN_BYTES_MAX = 128 * MEGABYTE  # real sessions stay well under this
@@ -38,8 +40,9 @@ APPROVAL_PATTERN = re.compile(
     re.IGNORECASE,
 )
 # any of these and it is not a plain yes: a doubt, a condition, or a number of the user's own
-VETO_PATTERN = re.compile(r"\?|\$|\b(no|not|don't|dont|wait|but|stop|hold|cancel|instead)\b",
-                          re.IGNORECASE)
+VETO_PATTERN = re.compile(
+    r"\?|\$|\b(no|not|don't|dont|wait|but|stop|hold|cancel|instead)\b", re.IGNORECASE
+)
 APPROVAL_CHARS_MAX = 120  # real approvals are a few words
 PROPOSAL_DOLLARS_MAX = 20.0  # over this the user types the line; a "yes" is too cheap for it
 TURN_CAP_PATTERN = re.compile(r"turn\s+cap\s+(\d{1,3}m|off)", re.IGNORECASE)
@@ -55,11 +58,28 @@ class Refusal(Exception):
 # -- decoding: transcript lines are untrusted JSON, narrowed here and nowhere else
 
 
+def as_object(value: object) -> dict[str, object] | None:
+    """A JSON object with str keys, else None. The one place a dict's types are pinned."""
+    if not isinstance(value, dict):
+        return None
+    # isinstance proved a dict; JSON keys are already strings, str() only pins the type
+    untyped = cast("dict[object, object]", value)
+    return {str(key): item for key, item in untyped.items()}
+
+
+def as_list(value: object) -> list[object] | None:
+    """A JSON array, else None; its items stay unchecked objects."""
+    if not isinstance(value, list):
+        return None
+    return cast("list[object]", value)  # isinstance proved a list; object hides nothing
+
+
 def field(value: object, *keys: str) -> object:
     for key in keys:
-        if not isinstance(value, dict):
+        record = as_object(value)
+        if record is None:
             return None
-        value = value.get(key)
+        value = record.get(key)
     return value
 
 
@@ -67,8 +87,9 @@ def text_of(content: object) -> str | None:
     """String content, or the first text block of list content (images ride along)."""
     if isinstance(content, str):
         return content
-    if isinstance(content, list):
-        for block in content:
+    blocks = as_list(content)
+    if blocks is not None:
+        for block in blocks:
             if field(block, "type") == "text":
                 text = field(block, "text")
                 if isinstance(text, str):
@@ -105,12 +126,7 @@ def parse_line(raw: bytes, is_last: bool) -> Record | None:
         if is_last:
             return None
         raise
-    if not isinstance(value, dict):
-        return None
-    record: Record = {}
-    for key, item in value.items():
-        record[str(key)] = item
-    return record
+    return as_object(value)
 
 
 def timestamp_of(record: Record) -> datetime.datetime:
@@ -159,8 +175,8 @@ def usage_of(record: Record) -> Usage | None:
     if record.get("type") != "assistant":
         return None
     model = field(record, "message", "model")
-    usage = field(record, "message", "usage")
-    if not isinstance(model, str) or model == SYNTHETIC_MODEL or not isinstance(usage, dict):
+    usage = as_object(field(record, "message", "usage"))
+    if not isinstance(model, str) or model == SYNTHETIC_MODEL or usage is None:
         return None
     # mid-stream lines can carry the TTL breakdown with a total of 0 (10 seen); trust the
     # breakdown, and count any excess in the total as 5-minute writes
@@ -341,28 +357,30 @@ class Prices:
 
 
 def string_map(value: object, name: str) -> dict[str, str]:
-    if not isinstance(value, dict):
+    entries = as_object(value)
+    if entries is None:
         raise TypeError(f"{name} is not an object")
     result: dict[str, str] = {}
-    for key, item in value.items():
-        if not isinstance(key, str) or not isinstance(item, str):
+    for key, item in entries.items():
+        if not isinstance(item, str):
             raise TypeError(f"{name} holds a non-string entry")
         result[key] = item
     return result
 
 
 def rate_table(value: object) -> dict[str, dict[str, float]]:
-    if not isinstance(value, dict) or not value:
+    table = as_object(value)
+    if table is None or not table:
         raise ValueError("models is not a non-empty object")
     models: dict[str, dict[str, float]] = {}
-    for model_id, rates in value.items():
+    for model_id, rates in table.items():
         row: dict[str, float] = {}
         for name in RATE_NAMES:
             rate = field(rates, name)
             if isinstance(rate, bool) or not isinstance(rate, (int, float)) or rate < 0:
                 raise ValueError(f"models.{model_id}.{name} is not a rate")
             row[name] = float(rate)
-        models[str(model_id)] = row
+        models[model_id] = row
     return models
 
 
@@ -474,8 +492,8 @@ def assistant_text(record: Record) -> str | None:
     """All text blocks of an agent line joined, else None (tool calls and thinking only)."""
     if record.get("type") != "assistant":
         return None
-    content = field(record, "message", "content")
-    if not isinstance(content, list):
+    content = as_list(field(record, "message", "content"))
+    if content is None:
         return None
     texts = [field(block, "text") for block in content if field(block, "type") == "text"]
     return "\n".join(text for text in texts if isinstance(text, str)) or None
@@ -668,7 +686,10 @@ def main(argv: list[str]) -> int:
         return 2
     except Exception as error:  # noqa: BLE001 -- any crash is reported, never raised
         if mode == "turn":  # a broken turn cap must not lock every tool call
-            print(f"guard: turn cap skipped, internal error: {type(error).__name__}: {error}", file=sys.stderr)
+            print(
+                f"guard: turn cap skipped, internal error: {type(error).__name__}: {error}",
+                file=sys.stderr,
+            )
             return 0
         print(  # fail closed for launches: a crash refuses, with the error shown
             f"guard: refused: internal error: {type(error).__name__}: {error};"
