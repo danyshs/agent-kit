@@ -113,13 +113,13 @@ REQUIRED_CLAUDE_KEYS: Final = {
     "assistant": ("uuid", "timestamp", "message"),
     "user": ("uuid", "timestamp", "message"),
 }
-# re-read 2026-11-20 over the live store; any other type adds 1 to unknown_events
+# re-read 2026-11-22 over the live store; any other type adds 1 to unknown_events
 CLAUDE_IGNORED_TYPES: Final = frozenset(
     "attachment api-request api-request-blob api-request-shape last-prompt atis-latch mode "
     "ai-title permission-mode system file-history-snapshot file-history-delta queue-operation "
     "cost-state agent-name tools-used custom-title pr-link worktree-state relocated frame-link "
     "continued-in artifact-comment-monitor artifact-autoreact-ledger session-owner "
-    "repl-mode".split()
+    "repl-mode data-flow-records".split()
 )
 CLAUDE_MALFORMED_MAX_PERCENT: Final = 1
 CLAUDE_HEAD_LINES_MAX: Final = 256  # cwd and timestamp sit in the first few lines
