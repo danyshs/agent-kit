@@ -285,9 +285,10 @@ Agent CLIs already log every session: each tool call, its result and the tokens 
 
 ```sh
 cd tools/trajectory
+since=$(date -v-7d +%F 2>/dev/null || date -d '7 days ago' +%F)  # last 7 days; BSD/macOS date, then GNU
 bin/traj build
-bin/traj report --fleet --since 2026-11-15 --out report.md
-bin/traj corrections --since 2026-11-15 --out corrections.md
+bin/traj report --fleet --since "$since" --out report.md
+bin/traj corrections --since "$since" --out corrections.md
 ```
 
 1. **Read and strip.** A reader per CLI (Claude Code, then Kiro) turns each log into one small, versioned record: session, turns, and each turn's steps (tool, a hash of its arguments, a hash of its target file, status, exit code, timing, sub-agent depth, which calls ran in parallel). No free text survives: prompts, replies and file contents are dropped, arguments become hashes, and names that don't match a strict pattern become `(other)`. A test plants a canary string in every text field of the fixtures and fails if it ever reaches the output. Every write is validated against the schema.
