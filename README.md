@@ -281,7 +281,14 @@ The tiger-style suite in `tools/evals/skills/tiger-style` runs as shipped. The f
 
 ### Trajectory analysis: what do my sessions actually look like?
 
-Agent CLIs already log every session: each tool call, its result and the tokens used. This tool reads those logs. It runs by itself every Sunday and pops a notification when the week's report is ready.
+Agent CLIs already log every session: each tool call, its result and the tokens used. This tool reads those logs. You run it by hand, or put the three commands in a weekly job of your own (I use a launchd agent and a fish script, not included here):
+
+```sh
+cd tools/trajectory
+bin/traj build
+bin/traj report --fleet --since 2026-11-15 --out report.md
+bin/traj corrections --since 2026-11-15 --out corrections.md
+```
 
 1. **Read and strip.** A reader per CLI (Claude Code, then Kiro) turns each log into one small, versioned record: session, turns, and each turn's steps (tool, a hash of its arguments, a hash of its target file, status, exit code, timing, sub-agent depth, which calls ran in parallel). No free text survives: prompts, replies and file contents are dropped, arguments become hashes, and names that don't match a strict pattern become `(other)`. A test plants a canary string in every text field of the fixtures and fails if it ever reaches the output. Every write is validated against the schema.
 2. **Count what was skipped.** Corrupt, oversized or unknown-format logs are counted, not silently dropped. Every report ends with a coverage table (files read, skipped and why, events used of events seen), so "no findings" can't be confused with "nothing read".
