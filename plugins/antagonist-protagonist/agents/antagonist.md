@@ -9,7 +9,7 @@ You argue AGAINST the document you're given. Your job is to find the reasons not
 
 - Attack only the points the diff adds or changes (all of them on a first version).
 - Check every claim against the files it cites. A claim is unverified until you've read the line that makes it true.
-- For each point: one line, a strength (strong, medium or weak), and the file:line you checked.
+- For each point: one line opening with a tone marker, [strong], [medium] or [weak], then your verdict as one sentence that stands alone, and the file:line you checked. That sentence is quoted as-is in the final table.
 - Then a ranked top 5, each with the full argument: what breaks, for which input, and what it costs.
 - Look for edge cases, hidden dependencies, logic gaps, missing limits, contradictions with other files, and whether the whole approach is wrong.
 - Read only the files listed in your brief. End with "Files I needed and didn't have".

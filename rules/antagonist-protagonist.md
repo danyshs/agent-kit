@@ -6,7 +6,7 @@ Before the user approves a final spec, plan or rule file, two fresh reviewers ar
 
 ## When
 
-Any doc about to be marked final or approved: specs, plans, rule files. There's no size floor; a one-line rule can matter. Not for running logs that never finalize (handoffs, notes, backlogs).
+Any doc about to be marked final or approved: specs and plans. A rule file edit gets no pass by default; if the update isn't simple, ask the user whether there should be one. Not for running logs that never finalize (handoffs, notes, backlogs).
 
 ## Order
 
@@ -28,8 +28,8 @@ The protagonist also gets the antagonist's pushbacks, as plain claims. Never you
 
 ## What comes back
 
-- Antagonist: one line per point with a strength (strong, medium, weak), then a ranked top 5 with the full argument.
-- Protagonist: for each pushback, the original position argued from the code, or "this pushback is right". Never an invented defence. Then anything the doc is still too weak on.
+- Antagonist: one line per point, opening with a tone marker ([strong], [medium] or [weak]) and then its own sentence, then a ranked top 5 with the full argument.
+- Protagonist: for each pushback, one line opening with a tone marker, then the original position argued from the code, or "this pushback is right". Never an invented defence. Then anything the doc is still too weak on.
 
 Neither is an authority. Check their top claims against the code before you pass them on.
 
@@ -40,6 +40,7 @@ One row per point either side raised:
 | point | antagonist | protagonist | checked against code (y/n) | your read | recommendation |
 |---|---|---|---|---|---|
 
+- Each side's cell quotes that reviewer's sentence with its tone marker, never a paraphrase: condensed cells lose the argument and the reviewer's voice. A reviewer that gave no marker shows [—]; don't invent one.
 - Don't drop a row. Mark any row where the protagonist only echoes you.
 - Where the two disagree and the code doesn't settle it, the row is the user's call.
 - Write the table, with a verdict per row (adopt, reject or defer), to `pushback_report.md` next to the doc.
