@@ -1,6 +1,6 @@
 ---
 name: antagonist
-description: Argues against a design doc, plan or rule file before it is approved. Read-only. Launch it with the doc and its git diff in the brief and a list of the files it cites, never with your own reasoning.
+description: Argues against a design doc, plan or rule file before it is approved. Read-only. Launch it with the doc and its git diff in the brief and a list of the files it cites (the protagonist later gets the same references), never with your own reasoning.
 tools: Read, Grep, Glob
 model: sonnet
 ---

@@ -24,7 +24,7 @@ Launch the `antagonist` and `protagonist` agents that come with this module. Bot
 - an explicit list of the files the doc cites. The agent reads only those, and ends with the files it needed and didn't have; one re-run with those added is fine. A fixed list misses some findings a free search would catch, but it should spend far fewer turns re-reading what it gathered, and turns are where the cost is. The list is an instruction to the agent, not a permission fence, so check the turn count;
 - none of your own reasoning: no conversation summary, no list of what you already fixed. If it matters, it belongs in the doc.
 
-The protagonist also gets the antagonist's pushbacks, as plain claims. Never your replies or verdicts. With no git history, hand over a list of the points added and say that you wrote it, since a hand-picked list lets you choose the targets.
+Both agents get the same references: the same inline material and the same file list. A file added for one side is added for both, so the comparison is fair. On top of those, the protagonist gets the antagonist's pushbacks and your response to each (concede or hold, and what changed), so it can also judge whether you conceded too much. With no git history, hand over a list of the points added and say that you wrote it, since a hand-picked list lets you choose the targets.
 
 ## What comes back
 
