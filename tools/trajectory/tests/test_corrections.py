@@ -68,6 +68,7 @@ A_RECORDS: list[dict[str, object]] = [
     _user("u16", 15, _result("plain output")),
     _user("u17", 16, "don't treat Request interrupted as a stop"),
     _user("u18", 17, "stop now", origin={"kind": "task-notification"}),
+    _user("u19", 18, "please don't rename it"),
     {"type": "mode", "mode": "auto"},
     _user("u20", 20, _blocks(TOOL_USE)),
 ]
@@ -118,6 +119,10 @@ class ClassifyTest(unittest.TestCase):
         self.assertEqual(classify("no, the other one"), "correction")
         self.assertIsNone(classify("you know the drill"))
         self.assertEqual(classify("don't treat Request interrupted as a stop"), "correction")
+        self.assertEqual(classify("please don't rename it"), "maybe")
+        self.assertEqual(classify("Do not push yet"), "maybe")
+        self.assertEqual(classify("no, don't push"), "correction")  # the strong rule wins
+        self.assertIsNone(classify("dont care"))
         self.assertIsNone(classify("see [Request interrupted by user] in the log"))
 
 
@@ -138,8 +143,7 @@ class ScanTest(unittest.TestCase):
             sorted(
                 [
                     "no, use the other file",
-                    "why did you open that",
-                    "why did you open that",
+                    "why did you open that",  # two stops, one follow-up: listed once
                     "wrong branch",
                 ]
             ),
@@ -158,6 +162,7 @@ class ScanTest(unittest.TestCase):
                 ]
             ),
         )
+        self.assertEqual(_quotes(entries, "maybe"), ["please don't rename it"])
 
     def test_entry_points_at_the_quoted_message(self) -> None:
         # goal: path:line is the follow-up's line; with no follow-up, the interrupt's own line
@@ -201,6 +206,45 @@ class ScanTest(unittest.TestCase):
         self.assertIsInstance(scan(self.projects / "nope", SINCE, UNTIL), str)
 
 
+class EvalRepeatAndCleanTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.projects = Path(self.tmp.name) / "projects"
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_eval_file_is_skipped_and_counted(self) -> None:
+        # goal: a session run under /tmp lists nothing, like the report's eval-traffic rule
+        evals = [{**_user("e1", 0, "wrong file"), "cwd": "/tmp/evprobe-x"}]
+        real = [{**_user("r1", 0, "wrong file"), "cwd": "/Users/x/dev"}]
+        _write(self.projects / "-private-tmp-evprobe-x" / "e.jsonl", evals)
+        _write(self.projects / "-Users-x-dev" / "r.jsonl", real)
+        entries, coverage = _scan(self.projects)
+        self.assertEqual([e.project for e in entries], ["-Users-x-dev"])
+        self.assertEqual((coverage.evals, coverage.files), (1, 2))
+
+    def test_resent_message_is_listed_once(self) -> None:
+        # goal: the same words as a stop's follow-up and again as a resent message: one entry
+        records = [
+            _user("a1", 0, _blocks(STOP)),
+            _user("a2", 1, "wrong repo, the other one"),
+            _user("a3", 2, "wrong repo,  the other one"),  # resent; folds to the same quote
+            _user("a4", 3, _blocks(TOOL_USE)),
+        ]
+        _write(self.projects / "p" / "a.jsonl", records)
+        entries, coverage = _scan(self.projects)
+        self.assertEqual([(e.kind, e.line) for e in entries], [("tool_use", 4), ("stop", 2)])
+        self.assertEqual(coverage.repeats, 1)
+
+    def test_harness_text_is_cut_from_quotes(self) -> None:
+        note = "Note: The user's next message may contain a correction. Pay attention."
+        self.assertEqual(clean_quote("keep the name " + note), "keep the name")
+        pasted = 'see <pasted_content id="0f7d">\nlog line\n</pasted_content id="0f7d"> now'
+        self.assertEqual(clean_quote(pasted), "see [pasted] now")
+        self.assertEqual(clean_quote("<pasted_content>cut off log"), "[pasted]")
+
+
 class RenderTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tz = mock.patch.dict(os.environ, {"TZ": "America/New_York"})
@@ -225,8 +269,9 @@ class RenderTest(unittest.TestCase):
             "  > no, 'rm' # it\n"
             "\n## tool_use (0)\n(none)\n"
             "\n## correction (0)\n(none)\n"
-            "\ncoverage: 2 files read, 1 cut, 3 duplicate messages dropped; "
-            "oldest message 2026-11-10\n",
+            "\n## maybe (0)\n(none)\n"
+            "\ncoverage: 2 files read, 1 cut, 3 duplicate messages dropped, 0 repeated quotes "
+            "dropped, 0 eval files skipped; oldest message 2026-11-10\n",
         )
 
     def test_truncation_line_and_quote_cut(self) -> None:
@@ -238,7 +283,9 @@ class RenderTest(unittest.TestCase):
     def test_counts_line(self) -> None:
         when = datetime(2026, 11, 10, tzinfo=UTC)
         entry = Entry(when, "p", Path("a"), 1, "correction", "q")
-        self.assertEqual(counts_line([entry]), "traj corrections: 0 stop, 0 tool_use, 1 correction")
+        self.assertEqual(
+            counts_line([entry]), "traj corrections: 0 stop, 0 tool_use, 1 correction, 0 maybe"
+        )
 
 
 class CorrectionsCliTest(unittest.TestCase):
@@ -264,7 +311,7 @@ class CorrectionsCliTest(unittest.TestCase):
             "--projects", str(self.projects), "--since", "2026-11-01", "--out", str(target)
         )
         self.assertEqual(code, 0)
-        self.assertEqual(stdout, "traj corrections: 4 stop, 3 tool_use, 3 correction\n")
+        self.assertEqual(stdout, "traj corrections: 3 stop, 3 tool_use, 3 correction, 1 maybe\n")
         written = {p for p in self.root.rglob("*") if p.is_file()} - before
         self.assertEqual(written, {target})
         self.assertIn("wrong branch", target.read_text(encoding="utf-8"))

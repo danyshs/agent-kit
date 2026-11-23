@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Final, Literal
 
-from traj.common import as_dict, as_list, as_str
+from traj.common import as_dict, as_list, as_str, is_eval_traffic
 from traj.limits import (
     CORRECTION_ENTRIES_MAX,
     CORRECTION_FILES_MAX,
@@ -23,8 +23,8 @@ from traj.limits import (
     LINES_PER_FILE_MAX,
 )
 
-Kind = Literal["stop", "tool_use", "correction"]
-KINDS: Final[tuple[Kind, ...]] = ("stop", "tool_use", "correction")
+Kind = Literal["stop", "tool_use", "correction", "maybe"]
+KINDS: Final[tuple[Kind, ...]] = ("stop", "tool_use", "correction", "maybe")
 MARKERS: Final[dict[str, Kind]] = {
     "[Request interrupted by user]": "stop",
     "[Request interrupted by user for tool use]": "tool_use",
@@ -34,10 +34,15 @@ FEEDBACK: Final = "the user said:"
 NO_FOLLOW_UP: Final = "(no follow-up)"
 # "no," needs its own form: \b after the comma would demand a word character there
 CORRECTION: Final = re.compile(
-    r"\bno[,.!]|\b(wrong|garbage|don't|do not|stop|why did|you didn't|not what|that's not"
-    r"|undo|revert)\b",
+    r"\bno[,.!]|\b(wrong|garbage|stop|why did|you didn't|not what|that's not|undo|revert)\b",
     re.IGNORECASE,
 )
+# 80 of 115 correction entries on 2026-11-22 matched only on these; most were not corrections
+MAYBE: Final = re.compile(r"\b(don't|do not)\b", re.IGNORECASE)
+EVAL_ROOT_NAMES: Final = ("/tmp",)  # same rule as the readers: a session run under /tmp is an eval
+# Claude Code appends this to rejection feedback; it is not the user's words
+HARNESS_NOTE: Final = "Note: The user's next message"
+PASTED: Final = re.compile(r"<pasted_content[^>]*>.*?(</pasted_content[^>]*>|\Z)", re.DOTALL)
 
 
 @dataclass(frozen=True)
@@ -55,6 +60,8 @@ class Coverage:
     files: int = 0
     cut: int = 0
     duplicates: int = 0
+    evals: int = 0
+    repeats: int = 0
     oldest: datetime | None = None
     truncated: int = 0
 
@@ -69,6 +76,7 @@ class _Pending:
 
 @dataclass
 class _FileState:
+    cwd: str = ""  # the first cwd seen; decides eval traffic
     entries: list[Entry] = field(default_factory=lambda: list[Entry]())
     pending: list[_Pending] = field(default_factory=lambda: list[_Pending]())
 
@@ -111,14 +119,16 @@ def rejection_feedback(record: dict[str, object]) -> str:
 
 
 def classify(text: str) -> Kind | None:
-    """Exact interrupt markers first; then the correction-like candidate rule."""
+    """Exact interrupt markers first; then the correction-like rule, then the weaker maybe rule."""
     assert text, "only typed text is classified"
     marker = MARKERS.get(text.strip())
     if marker is not None:
         return marker
     if len(text) > CORRECTION_TEXT_CHARS_MAX or text.startswith("<"):
         return None
-    return "correction" if CORRECTION.search(text) else None
+    if CORRECTION.search(text):
+        return "correction"
+    return "maybe" if MAYBE.search(text) else None
 
 
 def _stamp(record: dict[str, object]) -> datetime | None:
@@ -145,7 +155,8 @@ def _flush(state: _FileState, project: str, path: Path, quote: str, line: int | 
 
 
 def read_file(path: Path, seen: set[str], coverage: Coverage) -> list[Entry]:
-    """One transcript: entries in file order. Pairing runs here, before dedupe drops copies."""
+    """One transcript: entries in file order, or none for eval traffic. Pairing runs here, before
+    dedupe drops copies."""
     project = path.parent.name
     if path.stat().st_size > FILE_BYTES_MAX:
         coverage.cut += 1
@@ -159,7 +170,27 @@ def read_file(path: Path, seen: set[str], coverage: Coverage) -> list[Entry]:
             _read_line(raw, number, project, path, seen, coverage, state)
     _flush(state, project, path, NO_FOLLOW_UP, None)
     assert not state.pending
-    return state.entries
+    eval_roots = [Path(root).resolve() for root in EVAL_ROOT_NAMES]
+    if is_eval_traffic((state.cwd,), eval_roots):
+        coverage.evals += 1
+        return []
+    return _drop_repeats(state.entries, coverage)
+
+
+def _drop_repeats(entries: list[Entry], coverage: Coverage) -> list[Entry]:
+    """The first entry per cleaned quote in a file; a resent message or a stop after a stop
+    would list the same words twice. `(no follow-up)` is not a quote, so it always stays."""
+    kept: list[Entry] = []
+    quotes: set[str] = set()
+    for entry in entries:
+        quote = clean_quote(entry.quote)
+        if entry.quote != NO_FOLLOW_UP and quote in quotes:
+            coverage.repeats += 1
+            continue
+        quotes.add(quote)
+        kept.append(entry)
+    assert len(kept) <= len(entries)
+    return kept
 
 
 def _read_line(
@@ -175,6 +206,8 @@ def _read_line(
         record = as_dict(json.loads(raw))
     except json.JSONDecodeError:
         return  # a half-written last line
+    if not state.cwd:
+        state.cwd = as_str(record.get("cwd"))
     when = _stamp(record)
     if when is None:
         return  # only metadata records lack a timestamp
@@ -197,7 +230,7 @@ def _read_line(
         state.pending.append(_Pending(when, number, kind, duplicate))
     elif state.pending:
         _flush(state, project, path, text, number)  # a follow-up is not listed again
-    elif kind == "correction" and not duplicate:
+    elif kind in ("correction", "maybe") and not duplicate:
         state.entries.append(Entry(when, project, path, number, kind, text))
 
 
@@ -222,8 +255,10 @@ def scan(projects: Path, since: datetime, until: datetime) -> tuple[list[Entry],
 
 
 def clean_quote(text: str) -> str:
-    """One line, no backticks, at most CORRECTION_QUOTE_CHARS_MAX characters."""
-    folded = " ".join(text.split()).replace("`", "'")
+    """One line, no backticks, pasted blocks and the harness note cut out, at most
+    CORRECTION_QUOTE_CHARS_MAX characters."""
+    own = PASTED.sub("[pasted]", text.split(HARNESS_NOTE, 1)[0])
+    folded = " ".join(own.split()).replace("`", "'")
     cut = folded[:CORRECTION_QUOTE_CHARS_MAX]
     assert len(cut) <= CORRECTION_QUOTE_CHARS_MAX and "\n" not in cut
     return cut
@@ -255,7 +290,8 @@ def render(entries: list[Entry], coverage: Coverage, since: datetime, until: dat
     oldest = f"{coverage.oldest.astimezone():%Y-%m-%d}" if coverage.oldest else "none"
     lines.append(
         f"coverage: {coverage.files} files read, {coverage.cut} cut, "
-        f"{coverage.duplicates} duplicate messages dropped; oldest message {oldest}"
+        f"{coverage.duplicates} duplicate messages dropped, {coverage.repeats} repeated quotes "
+        f"dropped, {coverage.evals} eval files skipped; oldest message {oldest}"
     )
     return "\n".join(lines) + "\n"
 
