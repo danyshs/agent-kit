@@ -60,30 +60,30 @@ curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor |
 
 ## Pick your plugins
 
-"Always on" means the rule is loaded into every session. "On request" means it costs nothing until you ask for it.
+The Parts column uses the kinds defined in [Kinds of parts](#kinds-of-parts): a **rule** is in every session's context; a **skill** costs one line until Claude loads it; **hooks** and **scripts** cost no context.
 
-| Plugin | What it does for you | Loads | Needs |
+| Plugin | What it does for you | Parts | Needs |
 |---|---|---|---|
 | **Starter pack** | | | |
-| `starter` | Installs the five below in one go. Has nothing of its own. | n/a | |
-| `tiger-style-core` | TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. Has a reference mode (the default, for writing code) and a review mode (for auditing changes). | On request ("review this with tiger style") | |
-| `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | Always on | |
-| `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another defends it. You decide. | Always on; a skill for running the passes | EGM optional |
-| `egm-helper` | Says when a task needs a design doc first, and the house rules for running EGM on it. | Always on | `egm` |
-| `single-evidence-ledger` | Each fact lives in one place; long debugging keeps a `FACTS.md` ledger. | Always on | |
+| `starter` | Installs the five below in one go. Has nothing of its own. | none | |
+| `tiger-style-core` | TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. Has a reference mode (the default, for writing code) and a review mode (for auditing changes). | skill, loaded on request ("review this with tiger style") | |
+| `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | rule | |
+| `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another defends it. You decide. | rule; skill for running the passes; 2 agents | EGM optional |
+| `egm-helper` | Says when a task needs a design doc first, and the house rules for running EGM on it. | rule | `egm` |
+| `single-evidence-ledger` | Each fact lives in one place; long debugging keeps a `FACTS.md` ledger. | rule | |
 | **Language add-ons** | | | |
-| `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. Take the ones you write. | On request; loads together with `tiger-style-core`'s skill | `tiger-style-core` |
+| `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. Take the ones you write. | skill, loads together with `tiger-style-core`'s | `tiger-style-core` |
 | **Optional** | | | |
-| `turn-sound` | A short sound when Claude finishes or needs permission, different per session so you can tell parallel sessions apart. | Hook only | jq, ffmpeg (else a Mac chime, Linux silent) |
-| `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Always on | python3 |
-| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | Always on | |
-| `guards` | Spending limits on sub-agents, a model price ceiling, and a per-turn token cap. | Always on | python3 (does nothing without it) |
-| `rhino-owl` | Throwaway prototype runs for questions only running things can answer. | Always on | `guards` |
-| `pre-push` | Asks you to confirm a review ran before a branch's first push. A reminder, not a lock. | Always on | git; [manual step](SETUP.md#pre-push) |
+| `turn-sound` | A short sound when Claude finishes or needs permission, different per session so you can tell parallel sessions apart. | Claude Code hook | jq, ffmpeg (else a Mac chime, Linux silent) |
+| `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | rule; Claude Code hook; helper script | python3 |
+| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | rule | |
+| `guards` | Spending limits on sub-agents, a model price ceiling, and a per-turn token cap. | rule; Claude Code hook | python3 (does nothing without it) |
+| `rhino-owl` | Throwaway prototype runs for questions only running things can answer. | rule; skill; helper script | `guards` |
+| `pre-push` | Asks you to confirm a review ran before a branch's first push. A reminder, not a lock. | rule; git hook you install by hand | git; [manual step](SETUP.md#pre-push) |
 | **Extras** | | | |
-| `agent-orchestration` | When Claude should use sub-agents and when it shouldn't, and how to keep context small. | Always on | |
-| `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | Always on | |
-| `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | Always on | |
+| `agent-orchestration` | When Claude should use sub-agents and when it shouldn't, and how to keep context small. | rule | |
+| `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | rule | |
+| `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | rule | |
 
 Not a plugin: a status line (model, branch, tokens, cost) in `snippets/statusline.sh`. [SETUP.md](SETUP.md#status-line) shows how to turn it on.
 
@@ -105,7 +105,7 @@ flowchart TD
     K --> C
 ```
 
-Each box only happens if that plugin is installed. Rules without scripts (`debugging-discipline`, `when-to-ask`, `single-evidence-ledger`, `agent-orchestration`, `code-voice`, `fork-pr-check`) don't appear: they shape how Claude behaves throughout.
+Each box only happens if that plugin is installed. Rules with no hook or script (`debugging-discipline`, `when-to-ask`, `single-evidence-ledger`, `agent-orchestration`, `code-voice`, `fork-pr-check`) don't appear: they shape how Claude behaves throughout.
 
 ## The three workflows the kit adds
 
@@ -179,16 +179,23 @@ Everything below is detail: exact parts, files written, settings, and the evalua
 
 ## Kinds of parts
 
-| Part | What it is | When it's used |
-|---|---|---|
-| **Rule** | A page of plain-English instructions, e.g. "check every claim against the code". Each starts with `rule: <name>`. Inside a plugin it is `rules/<name>.1.json`; the plain `.md` copy is in the top-level `rules/`. | Printed into Claude's context at session start by a small SessionStart hook. |
-| **Skill** | A longer guide Claude reads only when needed. | Loaded when you ask ("review this with tiger style"). Free until then. |
-| **Agent** | A helper Claude can start, with its own instructions and read-only file access. | Started when a rule says so (the antagonist and protagonist). |
-| **Script** | A small program Claude Code runs on an event: a message sent, a tool about to run, Claude stopping. | Automatic. Claude doesn't choose to run it. |
+A plugin is the unit you install. Inside it are one or more of these parts, and they differ in who runs them and what they cost:
+
+| Part | Also called | What it is | Who runs it, and when | Context it costs |
+|---|---|---|---|---|
+| **Rule** | a steering file (Kiro), instructions in `CLAUDE.md` | A page of plain-English instructions, e.g. "check every claim against the code". Each starts with `rule: <name>`. Inside a plugin it is `rules/<name>.1.json`; the plain `.md` copy is in the top-level `rules/`. | A SessionStart hook prints it into Claude's context when a session starts. | All of it, every session |
+| **Skill** | | A longer guide in a folder with a `SKILL.md`. | Claude loads it when your request matches its description ("review this with tiger style"), or when a rule tells it to. | One line (its description) until loaded |
+| **Agent** | a sub-agent | A helper with its own instructions and, here, read-only file access. | Claude starts it when a rule or skill says so (the antagonist and protagonist). | Its own window; only its report comes back |
+| **Claude Code hook** | | A script Claude Code runs on an event: a session starting, a message sent, a tool about to run, Claude stopping. | Claude Code, automatically. Claude doesn't choose to run it. | None, unless it adds a line to your message |
+| **Helper script** | | A program that ships with a plugin. | Claude, through its shell, when a rule or skill says to (`rhino.py`, `lowlog.py`). | None |
+| **Git hook** | | A script git runs, not Claude Code. | git, on `git push`, only in repos you copied it into ([SETUP.md](SETUP.md#pre-push)). | None |
+| **Snippet** | | Not a plugin part: a file you set up yourself (`snippets/statusline.sh`). | Claude Code, once you point a setting at it. | None |
 
 ## Every plugin's parts and footprint
 
-| Plugin | Rule | Skill | Agents | Scripts, and when they run | Files it writes |
+Every plugin with a rule also has the small SessionStart hook that prints it; the table doesn't repeat that.
+
+| Plugin | Rule | Skill | Agents | Hooks and scripts, and when they run | Files it writes |
 |---|---|---|---|---|---|
 | `starter` | | | | none; depends on the five Starter plugins | none |
 | `tiger-style-core` | | `tiger-style`: `references/principles.md`, `references/review-checklist.md`, TigerBeetle's original guide, unchanged, with its licences, in `references/upstream/` | | | none |
@@ -197,12 +204,12 @@ Everything below is detail: exact parts, files written, settings, and the evalua
 | `antagonist-protagonist` | yes | `antagonist-protagonist`, with a brief template and a final-table template | `antagonist`, `protagonist` | | `pushback_report.md` next to the reviewed doc |
 | `egm-helper` | yes | uses EGM's | | | design docs under `docs/designs/` |
 | `single-evidence-ledger` | yes | | | | `FACTS.md` at the project root, when Claude starts one |
-| `turn-sound` | | | | `beep.sh` on Stop and on permission prompts | cached sounds in your temp folder |
-| `attention-levels` | yes | | | `attention.py` on every message; `lowlog.py` when Claude logs a decision it made for you at Low | `~/.claude/attention/`, `~/.claude/lowlog/` |
+| `turn-sound` | | | | `beep.sh` (Claude Code hook) on Stop and on permission prompts | cached sounds in your temp folder |
+| `attention-levels` | yes | | | `attention.py` (Claude Code hook) on every message; `lowlog.py` (helper script) when Claude logs a decision it made for you at Low | `~/.claude/attention/`, `~/.claude/lowlog/` |
 | `when-to-ask` | yes | | | | none |
-| `guards` | yes | | | `guard.py` before every tool call (turn cap) and every sub-agent launch (budget, ceiling); prices in `prices.json` | none; reads session logs only |
-| `rhino-owl` | yes | `rhino-owl`: how to write and run a launch sheet | | `rhino.py`, only when Claude runs an exploration; starts the rhinos and the Owl (brief in `brief/owl-brief.md`); ships its own copy of `guard.py` and `prices.json` | worktrees under `.claude/worktrees/`, a results file, `proposed-ledger.md` and `rom-evidence/` next to the launch sheet |
-| `pre-push` | yes | | | `git-hook/pre-push`, run by git, only in repos you copied it into | none |
+| `guards` | yes | | | `guard.py` (Claude Code hook) before every tool call (turn cap) and every sub-agent launch (budget, ceiling); prices in `prices.json` | none; reads session logs only |
+| `rhino-owl` | yes | `rhino-owl`: how to write and run a launch sheet | | `rhino.py` (helper script), only when Claude runs an exploration; starts the rhinos and the Owl (brief in `brief/owl-brief.md`); ships its own copy of `guard.py` and `prices.json` | worktrees under `.claude/worktrees/`, a results file, `proposed-ledger.md` and `rom-evidence/` next to the launch sheet |
+| `pre-push` | yes | | | `git-hook/pre-push` (git hook), run by git, only in repos you copied it into | none |
 | `agent-orchestration` | yes | | | | none |
 | `code-voice` | yes | | | | none |
 | `fork-pr-check` | yes | | | | none |
