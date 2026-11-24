@@ -68,7 +68,7 @@ curl -fsSL https://raw.githubusercontent.com/danyshs/agent-kit/main/bin/doctor |
 | `starter` | Installs the five below in one go. Has nothing of its own. | n/a | |
 | `tiger-style-core` | TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. Has a reference mode (the default, for writing code) and a review mode (for auditing changes). | On request ("review this with tiger style") | |
 | `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | Always on | |
-| `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another defends it. You decide. | Always on | EGM optional |
+| `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another defends it. You decide. | Always on; a skill for running the passes | EGM optional |
 | `egm-helper` | Says when a task needs a design doc first, and the house rules for running EGM on it. | Always on | `egm` |
 | `single-evidence-ledger` | Each fact lives in one place; long debugging keeps a `FACTS.md` ledger. | Always on | |
 | **Language add-ons** | | | |
@@ -126,7 +126,7 @@ flowchart LR
 ```
 
 - **Goldfish** reviewers are zero-context agents. Anything they can't understand from the doc alone is a hole in the doc. They never get a summary of the conversation.
-- **The antagonist** asks whether this should be done at all, or this way. **The protagonist** gets the antagonist's points as plain claims and argues the original position from the code, or says "this pushback is right". Both are read-only.
+- **The antagonist** asks whether this should be done at all, or this way. **The protagonist** gets the same references, the antagonist's points and Claude's response to each, and argues the original position from the code, or says "this pushback is right". Both are read-only.
 - The two plugins work separately: `antagonist-protagonist` runs before any final approval of a spec, plan or rule file, with or without EGM.
 - Approved docs are saved under `docs/designs/`; the review verdicts go in `pushback_report.md` next to the doc.
 
@@ -194,7 +194,7 @@ Everything below is detail: exact parts, files written, settings, and the evalua
 | `tiger-style-core` | | `tiger-style`: `references/principles.md`, `references/review-checklist.md`, TigerBeetle's original guide, unchanged, with its licences, in `references/upstream/` | | | none |
 | `tiger-style-<language>` (9) | | one per language | | | none |
 | `debugging-discipline` | yes | | | | none |
-| `antagonist-protagonist` | yes | | `antagonist`, `protagonist` | | `pushback_report.md` next to the reviewed doc |
+| `antagonist-protagonist` | yes | `antagonist-protagonist`, with a brief template and a final-table template | `antagonist`, `protagonist` | | `pushback_report.md` next to the reviewed doc |
 | `egm-helper` | yes | uses EGM's | | | design docs under `docs/designs/` |
 | `single-evidence-ledger` | yes | | | | `FACTS.md` at the project root, when Claude starts one |
 | `turn-sound` | | | | `beep.sh` on Stop and on permission prompts | cached sounds in your temp folder |
