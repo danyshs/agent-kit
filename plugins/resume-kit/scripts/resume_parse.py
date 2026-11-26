@@ -36,6 +36,7 @@ MONTHS = {
 CDOT = "\x01"  # stands in for $\cdot$ while splitting lists
 WAIVABLE = {
     "links": "links",
+    "blank-months": "blank-months",  # item: the gap's first month, YYYY-MM
     "skills": "skills-backed",
     "tags": "tags-in-languages",
     "skills-backed": "skills-backed",
@@ -349,7 +350,8 @@ def check_shape(r: Resume) -> None:
     if not r.sections:
         raise InputError(f"{r.path}: no \\rkSection markers; run /resume-setup to mark the resume")
     for s in r.sections:
-        if not s.entries and s.kind != "skills":
+        # skills hold skill lines; an 'other' section may be prose (a summary), left unchecked
+        if not s.entries and s.kind not in ("skills", "other"):
             raise InputError(f"section {s.id!r} has no entries")
     n_entries = sum(len(s.entries) for s in r.sections)
     for count, cap, what in (
@@ -504,6 +506,7 @@ BAD = {
     "missing bullet id": EA + r"\rkBullet{x}",
     "unknown bullet id": EA + r"\rkBullet[b-b1]{x}",
     "section with no entries": r"\rkSection{experience}{E}" + EA.replace("experience", "projects"),
+    "empty projects section": EA + r"\rkSection{projects}{P}",
     "two experience sections": EA + r"\rkSection{experience}{F}",
     "unknown kind": r"\rkSection{hobbies}{H}",
     "bad slug": r"\rkSection{experience}{E}\rkEntry{Acme Co}{\x{A}}",
@@ -539,6 +542,9 @@ def test_plain() -> None:
 
 
 def test_good() -> None:
+    # a prose 'other' section (a summary) parses with no entries; other kinds still need one
+    prose = parse_text(r"\rkSection{other}{\section{Summary}} Engineer who ships." + EA)
+    assert [(s.id, len(s.entries)) for s in prose.sections] == [("other-1", 0), ("experience", 1)]
     # an escaped dollar is money on the page; a bare one is math markup
     assert to_plain(r"to \$0.29 of \$6, $\times$2 and \% 5") == "to $0.29 of $6, ×2 and % 5", (
         to_plain(r"\$1")

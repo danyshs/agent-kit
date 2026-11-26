@@ -44,7 +44,8 @@ TIER_SEVERITY = {  # user, 2026-11-25: lowest cost last
     "unknown": "major",
 }
 LINE_RE = re.compile(
-    r'^(?P<head>[^@#!]+?)\s*(?:@"(?P<heading>[^"]+)")?\s*(?:#or:(?P<group>[\w-]+))?\s*$'
+    # a # inside a name (C#, F#) is part of it; only "#or:" starts a tag
+    r'^(?P<head>(?:[^@#!]|#(?!or:))+?)\s*(?:@"(?P<heading>[^"]+)")?\s*(?:#or:(?P<group>[\w-]+))?\s*$'
 )
 
 
@@ -249,6 +250,10 @@ def self_test() -> int:
     ), k
     odd = parse_line('Rust @"Odd heading"', tiers)
     assert odd is not None and odd.tier == "unknown"
+    sharp = parse_line('C# = C Sharp @"Preferred" #or:lang', tiers)
+    assert sharp and sharp.spellings == ["C#", "C Sharp"] and sharp.group == "lang", sharp
+    off = parse_line("C# ! Unity hobby work only", tiers)
+    assert off and off.spellings == ["C#"] and off.form == "omit", off
     for bad in ("Docker !", "= x"):
         try:
             parse_line(bad, tiers)

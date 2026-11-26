@@ -311,6 +311,9 @@ def blank_months(ctx: Ctx, p: dict[str, Any], _sev: str) -> list[Finding]:
         if sev == "none":
             continue
         ev = f"{n} blank months from {start[0]}-{start[1]:02d}" + (" to now" if trailing else "")
+        w = waiver(ctx.resume, "blank-months", f"{start[0]}-{start[1]:02d}")
+        if w:  # RB 8: a gap no edit can fix doesn't block ready; the reason stays on the report
+            sev, ev = "nit", f"{ev} (waived: {w.reason})"
         why = "a blank stretch on the timeline is read before any bullet"
         out.append(
             finding(
@@ -895,6 +898,11 @@ def test_blank() -> None:
     mid = entry("m", add_months((2023, 1), 9), (2024, 6))
     late = entry("z", add_months((2024, 6), 6), None)  # a 5-month gap after it
     assert sev_of("blank-months", ctx_of(exp(late, mid, old))) == ["major", "nit"]
+    right = [rp.Waiver("blank-months", "2023-02", "no work to add")]
+    wrong = [rp.Waiver("blank-months", "2023-03", "wrong month")]
+    # only the waived gap drops, and only on its own first month
+    assert sev_of("blank-months", ctx_of(exp(late, mid, old), waivers=right)) == ["nit", "nit"]
+    assert sev_of("blank-months", ctx_of(exp(late, mid, old), waivers=wrong)) == ["major", "nit"]
     assert gap(10, trailing=True) == ["blocker"] and gap(2, trailing=True) == []
 
 
