@@ -1,0 +1,15 @@
+{
+  "minimum qualifications": "required",
+  "requirements": "required",
+  "basic qualifications": "required",
+  "required qualifications": "required",
+  "qualifications": "required",
+  "what you'll need": "required",
+  "preferred qualifications": "preferred",
+  "nice to have": "preferred",
+  "bonus": "preferred",
+  "bonus points": "preferred",
+  "assets": "preferred",
+  "responsibilities": "responsibilities",
+  "what you'll do": "responsibilities"
+}
