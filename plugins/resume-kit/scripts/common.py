@@ -42,7 +42,7 @@ KEYWORDS_MAX = 200
 EVIDENCE_BYTES_MAX = 1024 * 1024
 FACTS_MAX = 2000
 RULES_MAX = 300
-LOCAL_RULING_VERSION = 1000  # sorts after every Google ruling
+LOCAL_RULING_VERSION = 1000  # sorts after every shipped ruling
 
 SEVERITIES = ("blocker", "major", "nit", "none")
 SECTION_KINDS = ("experience", "research", "projects", "education", "skills", "other")
