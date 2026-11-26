@@ -305,12 +305,32 @@ def gate_skills(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
     return [f for f in out if f is not None]
 
 
+CLAIMS_SHOWN_MAX = 6  # per merged finding; the rest are counted
+
+
+def merge_claims(loc: str, found: list[Finding]) -> Finding | None:
+    """One finding per entry, so a thin evidence file reports, not overflows the cap."""
+    if not found:
+        return None
+    assert all(f.rule_id == "truth-gate" for f in found)
+    shown = [f"{f.location_id}: {f.evidence}" for f in found[:CLAIMS_SHOWN_MAX]]
+    more = len(found) - len(shown)
+    text = "; ".join(shown) + (f"; and {more} more" if more else "")
+    return finding(
+        "truth-gate",
+        loc,
+        "blocker",
+        f"{len(found)} unbacked claims: {text}",
+        "add or confirm the facts that back them, or change the claims",
+    )
+
+
 def truth_gate(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
-    out = gate_skills(r, facts)
+    merged = [merge_claims("skills", gate_skills(r, facts))]
     for s in r.sections:
         for e in s.entries:
-            out += gate_entry(e, facts)
-    return out
+            merged.append(merge_claims(e.id, gate_entry(e, facts)))
+    return [f for f in merged if f is not None]
 
 
 def underclaims(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
@@ -589,7 +609,20 @@ def gate_case(bullet: str, facts_md: str) -> list[str]:
     assert not problems, problems
     e = rp.Entry("acme", "Acme", None, [], [], "", [rp.Bullet("acme-b1", bullet, [])])
     r = rp.Resume("t", [rp.Section("experience", "experience", "Experience", [e])])
-    return [f.evidence for f in truth_gate(r, facts)]
+    merged = truth_gate(r, facts)
+    raw = gate_entry(e, facts)
+    assert len(merged) == (1 if raw else 0), merged  # one finding per entry
+    return [f.evidence for f in raw]
+
+
+def test_merge() -> None:
+    """A thin evidence file must report every unbacked claim in one finding, not hit the cap."""
+    nums = " ".join(f"{i + 1}0 items" for i in range(30))
+    e = rp.Entry("acme", "Acme", None, [], [], "", [rp.Bullet("acme-b1", nums, [])])
+    r = rp.Resume("t", [rp.Section("experience", "experience", "Experience", [e])])
+    got = truth_gate(r, [])
+    assert len(got) == 1 and got[0].location_id == "acme", got
+    assert got[0].evidence.startswith("30 unbacked claims") and "and 24 more" in got[0].evidence
 
 
 def test_gate() -> None:
@@ -629,10 +662,11 @@ def test_gate() -> None:
 
 
 def self_test() -> int:
-    for t in (test_format, test_numbers, test_gate):
+    tests = (test_format, test_numbers, test_gate, test_merge)
+    for t in tests:
         t()
         print(f"ok {t.__name__}")
-    print("self-test passed (3 tests)")
+    print(f"self-test passed ({len(tests)} tests)")
     return 0
 
 
