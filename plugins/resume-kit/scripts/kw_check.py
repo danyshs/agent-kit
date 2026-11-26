@@ -13,8 +13,9 @@ Keywords file, one line per keyword the posting names:
   Docker ! team work only                   backed, left off on purpose; the reason is required
   - Jira                                    no evidence: a gap, listed for the record
   # comment
-A missing keyword costs by its heading's tier (data/headings.json): required a major, preferred or
-responsibilities a nit, unknown a major. Exit 0 none, 1 findings, 2 bad input, 3 missing package.
+A missing backed keyword costs by its heading's tier (data/headings.json): required a blocker,
+preferred a major, a soft-preferred OR-group sibling or a responsibilities-only keyword a nit,
+unknown a major. Exit 0 none, 1 findings, 2 bad input, 3 missing package.
 """
 
 from __future__ import annotations
@@ -35,9 +36,9 @@ import evidence  # noqa: E402  (after the package guard on purpose)
 
 PLUGIN = Path(__file__).resolve().parent.parent
 PLURAL_MIN_CHARS = 3  # "C" + "s" is "CS", a different word
-TIER_SEVERITY = {
-    "required": "major",
-    "preferred": "nit",
+TIER_SEVERITY = {  # user, 2026-11-25: lowest cost last
+    "required": "blocker",
+    "preferred": "major",
     "responsibilities": "nit",
     "unknown": "major",
 }
@@ -174,7 +175,16 @@ def check_group(members: list[Keyword], page: str, facts: list[evidence.Fact]) -
                 f"work {primary.spellings[0]!r} onto the page",
             )
         ]
-    return []  # one backed member covers the group; siblings cost nothing (RB OR-group ruling)
+    # one shown member clears the group; a backed sibling left off is soft-preferred (user)
+    return [
+        kw_finding(
+            "nit",
+            f"{k.spellings[0]!r} (OR-group {k.group}) is backed but not on the page",
+            "optional: one member already clears the group",
+        )
+        for k in claims
+        if k not in shown
+    ]
 
 
 def keywords(
@@ -260,6 +270,7 @@ def self_test() -> int:
         for x in (
             'Python @"Minimum qualifications"',
             'Java @"Preferred qualifications"',
+            'Scala @"Minimum qualifications"',
             "Kafka",
             "Rust #or:sys",
             "Go #or:sys",
@@ -270,9 +281,11 @@ def self_test() -> int:
     found, warns = keywords([x for x in kws if x is not None], page, facts)
     got = sorted((f.severity, f.evidence.split(" ")[0]) for f in found)
     assert got == [
+        ("blocker", "'Scala'"),
         ("major", "'Docker'"),
+        ("major", "'Java'"),
         ("major", "'Kafka'"),
-        ("nit", "'Java'"),
+        ("nit", "'Rust'"),
     ], got
     assert {w.keyword for w in warns} >= {"Python", "Java", "Kafka"}, warns
     print("self-test passed")
