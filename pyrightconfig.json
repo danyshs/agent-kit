@@ -3,5 +3,14 @@
     "plugins"
   ],
   "pythonVersion": "3.9",
-  "typeCheckingMode": "strict"
+  "typeCheckingMode": "strict",
+  "executionEnvironments": [
+    {
+      "root": "plugins/resume-kit/scripts",
+      "extraPaths": [
+        "plugins/resume-kit/scripts"
+      ],
+      "pythonVersion": "3.10"
+    }
+  ]
 }
