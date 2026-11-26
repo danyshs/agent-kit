@@ -353,6 +353,9 @@ def check_shape(r: Resume) -> None:
         # skills hold skill lines; an 'other' section may be prose (a summary), left unchecked
         if not s.entries and s.kind not in ("skills", "other"):
             raise InputError(f"section {s.id!r} has no entries")
+        # an unmarked skills table would pass every skills check by being unseen
+        if s.kind == "skills" and not r.skills:
+            raise InputError(f"section {s.id!r} has no \\rkSkillLine markers")
     n_entries = sum(len(s.entries) for s in r.sections)
     for count, cap, what in (
         (len(r.sections), common.SECTIONS_MAX, "SECTIONS_MAX"),
@@ -507,6 +510,7 @@ BAD = {
     "unknown bullet id": EA + r"\rkBullet[b-b1]{x}",
     "section with no entries": r"\rkSection{experience}{E}" + EA.replace("experience", "projects"),
     "empty projects section": EA + r"\rkSection{projects}{P}",
+    "skills section with no skill lines": r"\rkSection{skills}{S} Python" + EA,
     "two experience sections": EA + r"\rkSection{experience}{F}",
     "unknown kind": r"\rkSection{hobbies}{H}",
     "bad slug": r"\rkSection{experience}{E}\rkEntry{Acme Co}{\x{A}}",
