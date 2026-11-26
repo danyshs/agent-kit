@@ -84,6 +84,7 @@ The Parts column uses the kinds defined in [Kinds of parts](#kinds-of-parts): a 
 | `agent-orchestration` | When Claude should use sub-agents and when it shouldn't, and how to keep context small. | rule | |
 | `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | rule | |
 | `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | rule | |
+| `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. `/resume-setup` gets you started. | 2 skills; 3 agents; helper scripts | python3 or uv; a LaTeX build |
 
 Not a plugin: a status line (model, branch, tokens, cost) in `snippets/statusline.sh`. [SETUP.md](SETUP.md#status-line) shows how to turn it on.
 
@@ -213,6 +214,7 @@ Every plugin with a rule also has the small SessionStart hook that prints it; th
 | `agent-orchestration` | yes | | | | none |
 | `code-voice` | yes | | | | none |
 | `fork-pr-check` | yes | | | | none |
+| `resume-kit` | | `resume`, `resume-setup` | `resume-scorer`, `resume-judge`, `resume-variant` | Python scripts under `scripts/` (helper scripts), only when a skill runs them | `<resume>.resumekit.json` next to the resume; per-posting folders with `runs/`; a `.resumekit-venv/` when not using uv |
 
 ## Settings you can change
 

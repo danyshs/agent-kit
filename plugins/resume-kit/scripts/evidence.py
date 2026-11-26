@@ -17,6 +17,7 @@ Exit 0 ok, 1 findings or problems, 2 bad input, 3 missing package.
 
 from __future__ import annotations
 
+import difflib
 import json
 import re
 import sys
@@ -319,28 +320,38 @@ def gate_skills(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
 CLAIMS_SHOWN_MAX = 6  # per merged finding; the rest are counted
 
 
-def merge_claims(loc: str, found: list[Finding]) -> Finding | None:
-    """One finding per entry, so a thin evidence file reports, not overflows the cap."""
+def merge_claims(loc: str, found: list[Finding], orphan: str = "") -> Finding | None:
+    """One finding per entry, so a thin evidence file reports, not overflows the cap.
+    orphan: set when no fact names this entry at all, the usual cause of a wall of claims."""
     if not found:
         return None
     assert all(f.rule_id == "truth-gate" for f in found)
     shown = [f"{f.location_id}: {f.evidence}" for f in found[:CLAIMS_SHOWN_MAX]]
     more = len(found) - len(shown)
     text = "; ".join(shown) + (f"; and {more} more" if more else "")
-    return finding(
-        "truth-gate",
-        loc,
-        "blocker",
-        f"{len(found)} unbacked claims: {text}",
-        "add or confirm the facts that back them, or change the claims",
-    )
+    action = "add or confirm the facts that back them, or change the claims"
+    if orphan:
+        text = f"{orphan}; {text}"
+        action = f"set `entry: {loc}` on the facts for this item, then check again"
+    return finding("truth-gate", loc, "blocker", f"{len(found)} unbacked claims: {text}", action)
+
+
+def orphan_note(entry_id: str, fact_entries: set[str]) -> str:
+    """Empty when some fact names the entry; else what the facts call their entries."""
+    if entry_id in fact_entries:
+        return ""
+    near = difflib.get_close_matches(entry_id, sorted(fact_entries), n=3, cutoff=0.3)
+    hint = f" (closest fact entries: {', '.join(near)})" if near else ""
+    return f"no fact has entry: {entry_id}{hint}"
 
 
 def truth_gate(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
+    fact_entries = {f.entry for f in facts}
     merged = [merge_claims("skills", gate_skills(r, facts))]
     for s in r.sections:
         for e in s.entries:
-            merged.append(merge_claims(e.id, gate_entry(e, facts)))
+            orphan = orphan_note(e.id, fact_entries)
+            merged.append(merge_claims(e.id, gate_entry(e, facts), orphan))
     return [f for f in merged if f is not None]
 
 
@@ -387,22 +398,28 @@ def underclaims(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
 
 
 def private_terms(pdf_text: str, facts: list[Fact]) -> list[Finding]:
-    out: list[Finding] = []
+    """One finding per term on the page, naming every fact that lists it: a term shared by
+    many facts is one thing to remove, not many."""
     low = common.search_text(pdf_text)
+    hits: dict[str, tuple[str, list[str]]] = {}  # folded term: (as written, fact ids)
     for f in (f for f in facts if f.confidential):
         for t in f.terms:
             needle = common.search_text(t).split(" \x00 ")[0]  # same folding as the page
             assert needle, f"fact {f.id}: empty private term"
             if re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", low):
-                out.append(
-                    finding(
-                        "private-terms",
-                        "page",
-                        "blocker",
-                        f"confidential term {t!r} (fact {f.id}) is on the page",
-                        f"remove {t!r} from the resume",
-                    )
-                )
+                hits.setdefault(needle, (t, []))[1].append(f.id)
+    out: list[Finding] = []
+    for t, ids in hits.values():
+        assert ids and len(set(ids)) == len(ids), (t, ids)
+        out.append(
+            finding(
+                "private-terms",
+                "page",
+                "blocker",
+                f"confidential term {t!r} (facts {', '.join(ids)}) is on the page",
+                f"remove {t!r} from the resume",
+            )
+        )
     return out
 
 
@@ -679,6 +696,11 @@ def test_private() -> None:
     ):
         got = private_terms(page, facts)
         assert len(got) == hits, (page, got)
+    two = block + fact_block("p9", "acme", "More client work.", extra="terms:\n  - zafiro\n")
+    shared, problems = facts_of(two.replace("confidential: no", "confidential: yes"))
+    assert not problems, problems
+    got = private_terms("worked at Zafiro", shared)
+    assert len(got) == 1 and "p1, p9" in got[0].evidence, got  # one term, one finding
 
 
 def test_public() -> None:
@@ -715,6 +737,13 @@ def test_merge() -> None:
     got = truth_gate(r, [])
     assert len(got) == 1 and got[0].location_id == "acme", got
     assert got[0].evidence.startswith("30 unbacked claims") and "and 24 more" in got[0].evidence
+    # no fact names the entry: say so, and point at the nearest name the facts use
+    near, _ = facts_of(fact_block("x1", "acme-corp", "Shipped 10 items."))
+    got = truth_gate(r, near)
+    assert "no fact has entry: acme (closest fact entries: acme-corp)" in got[0].evidence, got
+    assert "entry: acme" in got[0].action, got
+    named, _ = facts_of(fact_block("x2", "acme", "Shipped 10 items."))
+    assert "no fact has entry" not in truth_gate(r, named)[0].evidence  # named: no orphan note
 
 
 def test_gate() -> None:
