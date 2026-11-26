@@ -127,6 +127,16 @@ def load_settings(path: Path) -> Settings:
     return s
 
 
+def check_pdf_size(path: Path) -> None:
+    """Bad input, not a crash: pypdf would read a huge or missing file whole."""
+    try:
+        size_bytes = path.stat().st_size
+    except OSError as e:
+        raise InputError(f"{path}: {e}") from e
+    if size_bytes > PDF_BYTES_MAX:
+        raise InputError(f"{path}: {size_bytes} bytes: PDF_BYTES_MAX ({PDF_BYTES_MAX}) hit")
+
+
 def write_json(path: Path, obj: Any) -> None:
     data = asdict(obj) if hasattr(obj, "__dataclass_fields__") else obj
     path.parent.mkdir(parents=True, exist_ok=True)

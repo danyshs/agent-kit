@@ -392,8 +392,16 @@ def location_ids(r: rp.Resume) -> set[str]:
 def pdf_text(path: Path) -> str:
     from pypdf import PdfReader
 
+    common.check_pdf_size(path)
     try:
-        return "\n".join(p.extract_text() or "" for p in PdfReader(path).pages)
+        pages = PdfReader(path).pages
+        if len(pages) > common.PDF_PAGES_MAX:
+            raise InputError(
+                f"{path}: {len(pages)} pages: PDF_PAGES_MAX ({common.PDF_PAGES_MAX}) hit"
+            )
+        return "\n".join(p.extract_text() or "" for p in pages)
+    except InputError:
+        raise
     except Exception as err:  # pypdf raises its own types on a corrupt file
         raise InputError(f"{path}: unreadable PDF: {err}") from err
 

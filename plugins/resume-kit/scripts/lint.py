@@ -76,6 +76,7 @@ def visitor(ys: list[float], fonts: list[float] | None) -> Callable[..., None]:
 
 
 def read_pdf(path: Path) -> Pdf:
+    common.check_pdf_size(path)
     try:
         reader = PdfReader(path)
         pages = reader.pages

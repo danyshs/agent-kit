@@ -133,14 +133,16 @@ def call_args(call: str) -> list[str]:
         return [call]
     args: list[str] = []
     i = m.end()
-    while True:
+    for _ in range(len(call)):  # each pass consumes one {group}, so len(call) bounds it
         j = i
         while j < len(call) and call[j].isspace():
             j += 1
         if j >= len(call) or call[j] != "{":
             return args or [call]
         arg, i = read_group(call, j)
+        assert i > j, "read_group must consume the group"
         args.append(arg)
+    raise AssertionError("call_args: loop bound hit")
 
 
 def blank_comments(text: str) -> tuple[str, list[Waiver]]:
@@ -379,6 +381,7 @@ def slugify(title: str, taken: set[str]) -> str:
         suffix = f"-{n}"
         slug = base[: SLUG_CHARS_MAX - len(suffix)].strip("-") + suffix
         n += 1
+        assert n <= len(taken) + 2, "a free suffix exists within len(taken) tries"
     return slug
 
 
