@@ -677,6 +677,43 @@ def today() -> YM:
     return (d.year, d.month)
 
 
+AGREE_SHOWN_MAX = 5
+
+
+def fold(text: str) -> str:
+    """Letters, digits, $ and % only, accents and ligatures decomposed: what both the parser
+    and the PDF must agree on, whatever the fonts, hyphenation or spacing did."""
+    decomposed = unicodedata.normalize("NFKD", text).lower()
+    return re.sub(r"[^a-z0-9$%]", "", decomposed)
+
+
+def disagreements(r: rp.Resume, pdf: Pdf) -> list[str]:
+    """Parsed text the PDF doesn't show. Every check after this reads the parsed text, so a
+    misread (or a stale PDF) would make every finding quietly wrong."""
+    page = fold("".join(ln for lines in pdf.lines for ln in lines))
+    assert page or not any(s.entries for s in r.sections), "an empty PDF passed read_pdf"
+    texts = [(e.id, e.title) for s in r.sections for e in s.entries]
+    texts += [(b.id, b.text) for s in r.sections for e in s.entries for b in e.bullets]
+    texts += [("skills", item) for line in r.skills for item in line.items]
+    return [f"{loc}: {text[:50]!r}" for loc, text in texts if fold(text) and fold(text) not in page]
+
+
+def check_agreement(r: rp.Resume, pdf: Pdf) -> None:
+    bad = disagreements(r, pdf)
+    if bad:
+        shown = "; ".join(bad[:AGREE_SHOWN_MAX])
+        raise InputError(
+            f"the PDF doesn't show {len(bad)} parsed texts ({shown}). Rebuild the PDF from this"
+            " .tex; if it is current, the parser misread it: report it as a bug"
+        )
+
+
+def make_ctx(r: rp.Resume, pdf: Pdf, settings: common.Settings, years: float, now: YM) -> Ctx:
+    """The only way run() builds its context: no check reads a parse the PDF doesn't show."""
+    check_agreement(r, pdf)
+    return Ctx(r, pdf, settings, years, now)
+
+
 def run(resume_json: Path, pdf_path: Path, settings_path: Path, out: Path) -> int:
     local, settings = rules.settings_local(settings_path)
     assert settings is not None, "settings_local returns settings when given a path"
@@ -687,7 +724,7 @@ def run(resume_json: Path, pdf_path: Path, settings_path: Path, out: Path) -> in
     if problems:
         raise InputError(f"{ev_path}: {len(problems)} problems; run: evidence.py lint {ev_path}")
     now = today()
-    ctx = Ctx(r, read_pdf(pdf_path), settings, paid_years(r, facts, now), now)
+    ctx = make_ctx(r, read_pdf(pdf_path), settings, paid_years(r, facts, now), now)
     n_bullets = len(all_bullets(r))
     n_items = sum(len(s.items) for s in r.skills)
     print(f"lint: {len(ctx.pdf.lines)} pages, {n_bullets} bullets, {n_items} skills items")
@@ -906,6 +943,43 @@ def test_bullets() -> None:
     assert sev_of("slop-counts", ctx_of(exp(e))) == ["major", "major"]
 
 
+def test_agree() -> None:
+    """A parse the PDF doesn't show stops the run; ligatures, accents, hyphens and wraps don't."""
+    b = [rp.Bullet("acme-b1", "Profiled the caf\u00e9 app's flows to $0.29 of 5,000", [])]
+    e = rp.Entry("acme", "Acme", None, [], [], "", b)
+    r = rp.Resume("t", [rp.Section("experience", "experience", "Experience", [e])])
+    good = Pdf("p", [["Acme", "Pro\ufb01led the cafe\u0301 app's \ufb02ows to $0.29", "of 5,000"]])
+    assert disagreements(r, good) == []
+    stale = Pdf("p", [["Acme", "Profiled the cafe app's flows to $0.30 of 5,000"]])
+    assert [d.split(":")[0] for d in disagreements(r, stale)] == ["acme-b1"]
+    s = common.Settings(1, "opinionated", "ev.md", "uv")
+    assert make_ctx(r, good, s, 2.0, NOW).pdf is good
+    try:
+        make_ctx(r, stale, s, 2.0, NOW)
+        raise AssertionError("a stale PDF passed")
+    except InputError as err:
+        assert "1 parsed texts" in str(err)
+    pct = rp.Bullet("acme-b2", "Cut cost 5% at Acme", [])
+    r2 = rp.Resume(
+        "t",
+        [
+            rp.Section(
+                "experience",
+                "experience",
+                "Experience",
+                [e, rp.Entry("x", "X", None, [], [], "", [pct])],
+            )
+        ],
+    )
+    lost = Pdf(
+        "p",
+        [["Acme", "Profiled the cafe app's flows to $0.29 of 5,000", "X", "Cut cost 5 at Acme"]],
+    )
+    assert [d.split(":")[0] for d in disagreements(r2, lost)] == ["acme-b2"], disagreements(
+        r2, lost
+    )
+
+
 def test_cap() -> None:
     many = tuple(f"Took step {i}" for i in range(common.FINDINGS_PER_CHECK_MAX + 1))
     rule = rules.Rule(
@@ -932,6 +1006,7 @@ TESTS = (
     test_order,
     test_skills,
     test_bullets,
+    test_agree,
     test_cap,
 )
 

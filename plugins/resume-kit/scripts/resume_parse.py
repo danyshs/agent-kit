@@ -18,6 +18,7 @@ import re
 import shutil
 import sys
 import tempfile
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -163,9 +164,20 @@ def blank_comments(text: str) -> tuple[str, list[Waiver]]:
     return "\n".join(out), waivers
 
 
+ACCENTS = {"'": "\u0301", "`": "\u0300", '"': "\u0308", "^": "\u0302", "~": "\u0303"}
+
+
+def accent(m: re.Match[str]) -> str:
+    return unicodedata.normalize("NFC", m.group(2) + ACCENTS[m.group(1)])
+
+
 def to_plain(latex: str) -> str:
     """LaTeX fragment to the text a reader sees, near enough for matching."""
     t = latex.replace(r"\textasciitilde{}", "\x02").replace("$\\sim$", "\x02")
+    t = re.sub(r"(?<!\\)\\([`'\"^~])\{?([A-Za-z])\}?", accent, t)  # \'e and \'{e} to one letter
+    t = re.sub(r"(?<=\d)\\,(?=\d)", ",", t)  # 5\,000 is one number, not two
+    t = t.replace(r"\{", "\x04").replace(r"\}", "\x05").replace(r"\_", "_").replace(r"\-", "")
+    t = t.replace(r"\/", "").replace(r"\@", "")  # italic correction, sentence-spacing hint
     t = re.sub(r"\\href\{[^{}]*\}", "", t)
     t = re.sub(r"\\(?:color|textcolor)\{[^{}]*\}", "", t)
     for a, b in (
@@ -180,6 +192,7 @@ def to_plain(latex: str) -> str:
         ("--", "–"),
         (r"\,", " "),
         (r"\\", " "),
+        ("\\ ", " "),  # control space after an abbreviation, once \\\\ is gone
         ("~", " "),
     ):
         t = t.replace(a, b)
@@ -190,7 +203,13 @@ def to_plain(latex: str) -> str:
         .replace("$", "")
         .replace("\x02", "~")
         .replace("\x03", "$")
+        .replace("\x04", "{")
+        .replace("\x05", "}")
     )
+    left = re.search(r"\\.?", t)
+    if left:
+        raise InputError(f"unsupported LaTeX escape {left.group()!r} in {latex[:60]!r}")
+    assert not re.search("[\x02-\x05]", t), f"a placeholder survived in {t!r}"
     return re.sub(r"\s+", " ", t).strip()
 
 
@@ -494,6 +513,31 @@ BAD = {
 }
 
 
+def test_plain() -> None:
+    """Each LaTeX escape comes out as the reader sees it; a stray backslash is bad input."""
+    cases = {
+        r"to \$0.29 of \$6, $\times$2": "to $0.29 of $6, ×2",
+        r"vs.\ grid": "vs. grid",
+        r"x\_y": "x_y",
+        r"\{set\}": "{set}",
+        r"caf\'e": "caf\u00e9",
+        r"caf\'{e}": "caf\u00e9",
+        r"5\,000": "5,000",
+        r"a\,b": "a b",
+        r"hy\-phen": "hyphen",
+        r"end\\ next": "end next",
+        r"e.g.\@ x": "e.g. x",
+        r"\% 5 \& \#1": "% 5 & #1",
+    }
+    for src, want in cases.items():
+        assert to_plain(src) == want, (src, to_plain(src), want)
+    try:
+        to_plain(r"odd \! escape")
+        raise AssertionError("an unknown escape passed")
+    except InputError:
+        pass
+
+
 def test_good() -> None:
     # an escaped dollar is money on the page; a bare one is math markup
     assert to_plain(r"to \$0.29 of \$6, $\times$2 and \% 5") == "to $0.29 of $6, ×2 and % 5", (
@@ -545,7 +589,8 @@ def test_ids() -> None:
 
 
 def self_test() -> int:
-    for t in (test_good, test_bad, test_ids):
+    tests = (test_plain, test_good, test_bad, test_ids)
+    for t in tests:
         t()
         print(f"ok {t.__name__}")
     with tempfile.TemporaryDirectory() as d:
@@ -553,7 +598,7 @@ def self_test() -> int:
         p.write_text(GOOD, encoding="utf-8")
         assert main([str(p), "--out", str(Path(d) / "r.json")]) == 0
         assert common.read_json(Path(d) / "r.json")["sections"][1]["entries"][0]["id"] == "acme"
-    print(f"self-test passed (3 tests, {len(BAD)} bad inputs)")
+    print(f"self-test passed ({len(tests)} tests, {len(BAD)} bad inputs)")
     return 0
 
 

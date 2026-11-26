@@ -24,6 +24,7 @@ import json
 import re
 import sys
 import tempfile
+import unicodedata
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -57,7 +58,7 @@ class Keyword:
 
 
 def squash(text: str) -> str:
-    return re.sub(r"\s+", " ", text).lower()
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text)).lower()
 
 
 def has_word(text: str, word: str) -> bool:
@@ -223,7 +224,7 @@ def run(kw_file: Path, ev_file: Path, pdf: Path, out: Path) -> int:
     facts, problems = evidence.load_facts(ev_file)
     if problems:
         raise InputError(f"{ev_file}: {len(problems)} problems; run: evidence.py lint {ev_file}")
-    page = squash(evidence.pdf_text(pdf))
+    page = common.search_text(evidence.pdf_text(pdf))
     found, warnings = keywords(kws, page, facts)
     if len(found) > common.FINDINGS_PER_CHECK_MAX:
         raise InputError(
@@ -259,6 +260,8 @@ def self_test() -> int:
         and not has_word("ci and cs", "C")
         and has_word("code reviews", "code review")
     )
+    lig = common.search_text("Pro\ufb01ling and work\ufb02ows in Py-\nthon")
+    assert has_word(lig, "profiling") and has_word(lig, "workflows") and has_word(lig, "Python")
     page = squash("Built in Python and Go")
     facts_md = evidence.fact_block("a", "acme", "Shipped Rust and Go services, used Docker.")
     with tempfile.TemporaryDirectory() as d:

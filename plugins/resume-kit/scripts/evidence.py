@@ -382,10 +382,12 @@ def underclaims(r: rp.Resume, facts: list[Fact]) -> list[Finding]:
 
 def private_terms(pdf_text: str, facts: list[Fact]) -> list[Finding]:
     out: list[Finding] = []
-    low = pdf_text.lower()
+    low = common.search_text(pdf_text)
     for f in (f for f in facts if f.confidential):
         for t in f.terms:
-            if re.search(r"(?<![a-z0-9])" + re.escape(t.lower()) + r"(?![a-z0-9])", low):
+            needle = common.search_text(t).split(" \x00 ")[0]  # same folding as the page
+            assert needle, f"fact {f.id}: empty private term"
+            if re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", low):
                 out.append(
                     finding(
                         "private-terms",
@@ -620,6 +622,22 @@ def gate_case(bullet: str, facts_md: str) -> list[str]:
     return [f.evidence for f in raw]
 
 
+def test_private() -> None:
+    """A private term must be caught however the PDF spells it: ligatures, a line break inside a
+    two-word term, a word hyphenated at a line end. A longer word that contains it is not a hit."""
+    block = fact_block("p1", "acme", "Client work.", extra="terms:\n  - Zafiro\n  - Globex  Labs\n")
+    facts, problems = facts_of(block.replace("confidential: no", "confidential: yes"))
+    assert not problems and facts[0].confidential, problems
+    for page, hits in (
+        ("worked at Za\ufb01ro", 1),
+        ("built at Globex\nLabs", 1),
+        ("at Zafi-\nro in 2023", 1),
+        ("Zafirov and Globexer Labs", 0),
+    ):
+        got = private_terms(page, facts)
+        assert len(got) == hits, (page, got)
+
+
 def test_merge() -> None:
     """A thin evidence file must report every unbacked claim in one finding, not hit the cap."""
     nums = " ".join(f"{i + 1}0 items" for i in range(30))
@@ -667,7 +685,7 @@ def test_gate() -> None:
 
 
 def self_test() -> int:
-    tests = (test_format, test_numbers, test_gate, test_merge)
+    tests = (test_format, test_numbers, test_gate, test_merge, test_private)
     for t in tests:
         t()
         print(f"ok {t.__name__}")

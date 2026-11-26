@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
+import unicodedata
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -135,6 +137,17 @@ def check_pdf_size(path: Path) -> None:
         raise InputError(f"{path}: {e}") from e
     if size_bytes > PDF_BYTES_MAX:
         raise InputError(f"{path}: {size_bytes} bytes: PDF_BYTES_MAX ({PDF_BYTES_MAX}) hit")
+
+
+def search_text(raw: str) -> str:
+    """PDF text as one searchable string. NFKC turns the fi/fl ligatures back into letters;
+    whitespace is squashed so a term split over a line still matches; a second copy joins
+    words LaTeX hyphenated at a line end. The two copies sit apart, split by a NUL."""
+    t = re.sub(r"\s+", " ", unicodedata.normalize("NFKC", raw).lower()).strip()
+    joined = re.sub(r"(?<=[a-z])- (?=[a-z])", "", t)
+    out = t if joined == t else f"{t} \x00 {joined}"
+    assert "\ufb01" not in out and "\ufb02" not in out, "a ligature survived NFKC"
+    return out
 
 
 def write_json(path: Path, obj: Any) -> None:
