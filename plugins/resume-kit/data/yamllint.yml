@@ -1,0 +1,7 @@
+extends: default
+rules:
+  truthy: disable  # yes and no are strings here on purpose; StrictYAML reads them as written
+  document-start: disable  # a fact block is a fragment of a Markdown file, not a YAML document
+  line-length: disable  # fact text is prose
+  indentation:
+    indent-sequences: whatever  # "- item" flush under its key or indented: both are fine YAML

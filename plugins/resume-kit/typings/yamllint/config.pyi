@@ -1,0 +1,3 @@
+# typed surface of yamllint 1.38.0 that resume-kit uses
+class YamlLintConfig:
+    def __init__(self, content: str | None = ..., file: str | None = ...) -> None: ...

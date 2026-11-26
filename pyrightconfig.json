@@ -10,7 +10,9 @@
       "extraPaths": [
         "plugins/resume-kit/scripts"
       ],
-      "pythonVersion": "3.10"
+      "pythonVersion": "3.10",
+      "reportMissingModuleSource": "none"
     }
-  ]
+  ],
+  "stubPath": "plugins/resume-kit/typings"
 }

@@ -20,6 +20,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # sibling module, not a package
@@ -33,6 +34,7 @@ MONTHS = {
 }
 CDOT = "\x01"  # stands in for $\cdot$ while splitting lists
 WAIVABLE = {
+    "links": "links",
     "skills": "skills-backed",
     "tags": "tags-in-languages",
     "skills-backed": "skills-backed",
@@ -64,6 +66,7 @@ class Entry:
     dates: DateRange | None
     tags: list[str]
     links: list[str]
+    heading: str = ""  # the whole heading as a reader sees it (role, labels, location)
     bullets: list[Bullet] = field(default_factory=list[Bullet])
 
 
@@ -307,7 +310,7 @@ def parse_text(raw: str, path: str = "<text>") -> Resume:
             if any(e.id == slug for s in r.sections for e in s.entries):
                 raise InputError(f"duplicate entry slug {slug!r}")
             title, dates, tags = entry_fields(section.kind, args[1])
-            entry = Entry(slug, title, dates, tags, links_in(args[1]))
+            entry = Entry(slug, title, dates, tags, links_in(args[1]), to_plain(args[1]))
             section.entries.append(entry)
         else:
             add_bullet(entry, bid.strip(), args[0], ids)
@@ -329,6 +332,33 @@ def check_shape(r: Resume) -> None:
     ):
         if count > cap:
             raise InputError(f"{r.path}: {count} over {what} ({cap})")
+
+
+def load_resume(path: Path) -> Resume:
+    """resume.json back into dataclasses."""
+    d = common.read_json(path, common.EVIDENCE_BYTES_MAX)
+    try:
+        sections = [
+            Section(s["kind"], s["id"], s["title"], [load_entry(e) for e in s["entries"]])
+            for s in d["sections"]
+        ]
+        skills = [SkillLine(k["label"], list(k["items"])) for k in d["skills"]]
+        waivers = [Waiver(w["check"], w["item"], w["reason"]) for w in d["waivers"]]
+    except (KeyError, TypeError) as e:
+        raise InputError(f"{path}: not a resume.json: {e}") from e
+    return Resume(str(d.get("path", path)), sections, skills, waivers)
+
+
+def load_entry(e: dict[str, Any]) -> Entry:
+    dr = e["dates"]
+    dates = None
+    if dr is not None:
+        end = (int(dr["end"][0]), int(dr["end"][1])) if dr["end"] else None
+        dates = DateRange((int(dr["start"][0]), int(dr["start"][1])), end)
+    bullets = [Bullet(b["id"], b["text"], list(b["links"])) for b in e["bullets"]]
+    return Entry(
+        e["id"], e["title"], dates, list(e["tags"]), list(e["links"]), e.get("heading", ""), bullets
+    )
 
 
 def parse_tex(path: Path) -> Resume:
