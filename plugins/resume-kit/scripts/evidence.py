@@ -251,6 +251,11 @@ def finding(rule: str, loc: str, sev: str, evidence: str, action: str) -> Findin
     return Finding(rule, loc, sev, evidence, why, action)
 
 
+def show_number(value: float) -> str:
+    """20000000, not 2e+07: the friend compares it with the page."""
+    return f"{value:,.0f}" if value == int(value) else f"{value:,.4f}".rstrip("0")
+
+
 def claim_finding(loc: str, what: str, backed: list[Fact]) -> Finding | None:
     """None when a confirmed fact backs it; unconfirmed when only a draft does."""
     if any(f.status == "confirmed" for f in backed):
@@ -279,7 +284,7 @@ def gate_entry(e: rp.Entry, facts: list[Fact]) -> list[Finding]:
     for b in e.bullets:
         for n in numbers(b.text):
             backed = [f for f in mine if any(same_number(n, x) for x in numbers(f.text))]
-            out.append(claim_finding(b.id, f"number {n.value:g}{n.unit}", backed))
+            out.append(claim_finding(b.id, f"number {show_number(n.value)}{n.unit}", backed))
         for url in b.links:
             backed = [f for f in mine if norm_link(url) in map(norm_link, f.links)]
             out.append(claim_finding(b.id, f"link {url}", backed))

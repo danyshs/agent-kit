@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "required": [
+    "prefers",
+    "why"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "prefers": {
+      "enum": [
+        "A",
+        "B"
+      ]
+    },
+    "why": {
+      "type": "string",
+      "maxLength": 1500
+    }
+  }
+}

@@ -7,7 +7,7 @@ import json
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 # limits: placeholders until the next score test (design doc, Limits)
 FIX_ROUNDS_MAX = 5
@@ -151,6 +151,56 @@ def read_json(path: Path, max_bytes: int = AGENT_JSON_BYTES_MAX) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as e:
         raise InputError(f"{path}: {e}") from e
+
+
+SCHEMA_DEPTH_MAX = 8  # our schemas nest 4 deep; deeper input is refused
+
+
+def schema_errors(obj: Any, schema: dict[str, Any], where: str = "$", depth: int = 0) -> list[str]:
+    """The JSON Schema subset our agent schemas use: type, enum, required, properties,
+    additionalProperties false, items, maxItems, maxLength. No package, so no install."""
+    if depth > SCHEMA_DEPTH_MAX:
+        return [f"{where}: nested deeper than {SCHEMA_DEPTH_MAX}"]
+    if "enum" in schema:
+        return [] if obj in schema["enum"] else [f"{where}: {obj!r} not one of {schema['enum']}"]
+    kind = schema.get("type")
+    if kind == "string":
+        if not isinstance(obj, str):
+            return [f"{where}: expected a string"]
+        n = schema.get("maxLength")
+        return [f"{where}: longer than {n} characters"] if n is not None and len(obj) > n else []
+    if kind == "array":
+        return array_errors(obj, schema, where, depth)
+    if kind == "object":
+        return object_errors(obj, schema, where, depth)
+    raise AssertionError(f"schema type {kind!r} not supported")
+
+
+def array_errors(obj: Any, schema: dict[str, Any], where: str, depth: int) -> list[str]:
+    if not isinstance(obj, list):
+        return [f"{where}: expected a list"]
+    items = cast(list[Any], obj)
+    n = schema.get("maxItems")
+    if n is not None and len(items) > n:
+        return [f"{where}: more than {n} items"]
+    out: list[str] = []
+    for i, x in enumerate(items):
+        out += schema_errors(x, schema["items"], f"{where}[{i}]", depth + 1)
+    return out
+
+
+def object_errors(obj: Any, schema: dict[str, Any], where: str, depth: int) -> list[str]:
+    if not isinstance(obj, dict):
+        return [f"{where}: expected an object"]
+    d = cast(dict[str, Any], obj)
+    props: dict[str, Any] = schema.get("properties", {})
+    out = [f"{where}: missing {k}" for k in schema.get("required", []) if k not in d]
+    if schema.get("additionalProperties") is False:
+        out += [f"{where}: unexpected key {k}" for k in d if k not in props]
+    for k, sub in props.items():
+        if k in d:
+            out += schema_errors(d[k], sub, f"{where}.{k}", depth + 1)
+    return out
 
 
 def findings_out(path: Path, findings: list[Finding], extra: dict[str, Any] | None = None) -> None:

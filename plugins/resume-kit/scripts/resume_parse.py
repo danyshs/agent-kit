@@ -172,7 +172,7 @@ def to_plain(latex: str) -> str:
         (r"\&", "&"),
         (r"\%", "%"),
         (r"\#", "#"),
-        (r"\$", "$"),
+        (r"\$", "\x03"),  # a held $: bare $ below is math and gets dropped
         ("$\\times$", "×"),
         ("$\\cdot$", CDOT),
         ("$-$", "-"),
@@ -184,7 +184,13 @@ def to_plain(latex: str) -> str:
     ):
         t = t.replace(a, b)
     t = re.sub(r"\\[a-zA-Z]+\*?", " ", t)
-    t = t.replace("{", "").replace("}", "").replace("$", "").replace("\x02", "~")
+    t = (
+        t.replace("{", "")
+        .replace("}", "")
+        .replace("$", "")
+        .replace("\x02", "~")
+        .replace("\x03", "$")
+    )
     return re.sub(r"\s+", " ", t).strip()
 
 
@@ -489,6 +495,10 @@ BAD = {
 
 
 def test_good() -> None:
+    # an escaped dollar is money on the page; a bare one is math markup
+    assert to_plain(r"to \$0.29 of \$6, $\times$2 and \% 5") == "to $0.29 of $6, ×2 and % 5", (
+        to_plain(r"\$1")
+    )
     r = parse_text(GOOD)
     assert [s.id for s in r.sections] == [
         "skills",
