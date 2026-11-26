@@ -94,7 +94,7 @@ class Settings:
     page_rule: int | str  # 1, 2 or "none"
     mode: str  # "opinionated" or "flexible"
     evidence: str
-    runner: str  # "uv" or "venv"
+    runner: str  # "uv" or "python" (a .resumekit-venv in the resume folder)
     build: str = "latexmk -pdf {tex}"
     academic: bool = False
     body_font_pt: float | None = None  # recorded by setup on the first build
@@ -107,7 +107,8 @@ def require(modules: list[str], runner: str = "uv") -> None:
     if not missing:
         return
     pins = " ".join(PACKAGES.get(m, m) for m in missing)
-    how = f"uv run --with {pins} <script>" if runner == "uv" else f"python3 -m pip install {pins}"
+    pip = f".resumekit-venv/bin/python -m pip install {pins}"
+    how = f"uv run --with {pins} <script>" if runner == "uv" else pip
     print(f"missing package: {', '.join(missing)}. Install: {how}", file=sys.stderr)
     sys.exit(3)
 
@@ -125,8 +126,8 @@ def load_settings(path: Path) -> Settings:
         raise InputError(f'{path}: page_rule must be 1, 2 or "none", got {s.page_rule!r}')
     if s.mode not in ("opinionated", "flexible"):
         raise InputError(f"{path}: mode must be opinionated or flexible, got {s.mode!r}")
-    if s.runner not in ("uv", "venv"):
-        raise InputError(f"{path}: runner must be uv or venv, got {s.runner!r}")
+    if s.runner not in ("uv", "python"):
+        raise InputError(f"{path}: runner must be uv or python, got {s.runner!r}")
     return s
 
 

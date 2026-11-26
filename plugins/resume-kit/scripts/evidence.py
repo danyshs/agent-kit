@@ -176,6 +176,11 @@ def to_fact(first: int, text: str, name: str) -> tuple[Fact | None, list[Problem
         list(d.get("links", [])),
         list(d.get("questions", [])),
     )
+    if f.confidential and not f.terms:
+        # the private-terms check can only look for what is listed
+        return f, [Problem(name, first, 1, f"fact {f.id}: confidential needs terms to check for")]
+    if f.is_measure and not numbers(f.text):
+        return f, [Problem(name, first, 1, f"fact {f.id}: is_measure: yes, but text has no number")]
     return f, []
 
 
@@ -584,8 +589,9 @@ def cmd_hook() -> int:
 
 
 def fact_block(fid: str, entry: str, text: str, status: str = "confirmed", extra: str = "") -> str:
+    measure = "yes" if numbers(text) else "no"
     return (
-        f"```fact\nid: {fid}\nentry: {entry}\ntext: >\n  {text}\nis_measure: yes\npaid: yes\n"
+        f"```fact\nid: {fid}\nentry: {entry}\ntext: >\n  {text}\nis_measure: {measure}\npaid: yes\n"
         f"shipped: yes\nsource: test\nconfidential: no\nstatus: {status}\n{extra}```\n"
     )
 
@@ -661,6 +667,10 @@ def test_private() -> None:
     block = fact_block("p1", "acme", "Client work.", extra="terms:\n  - Zafiro\n  - Globex  Labs\n")
     facts, problems = facts_of(block.replace("confidential: no", "confidential: yes"))
     assert not problems and facts[0].confidential, problems
+    bare = fact_block("p2", "acme", "Client work.").replace("confidential: no", "confidential: yes")
+    assert any("needs terms" in p.message for p in facts_of(bare)[1]), "no terms passed"
+    vague = fact_block("p3", "acme", "Made it faster.").replace("is_measure: no", "is_measure: yes")
+    assert any("no number" in p.message for p in facts_of(vague)[1]), "a measure with no number"
     for page, hits in (
         ("worked at Za\ufb01ro", 1),
         ("built at Globex\nLabs", 1),

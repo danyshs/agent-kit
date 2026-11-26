@@ -26,7 +26,7 @@ Each round gets a new folder `R = P/runs/polish-<n>/`.
 1. **Nits.** Fix the last report's nits the same way, rebuild, and rerun the sharp checks. Keep a nit fix only when the check no longer raises it and `evidence.py check` passes. Nit fixes are not votes and don't count as kept changes.
 2. **One change.** Propose one change at one location: a bullet's wording, or one entry's order. One change only, so a bad edit can't ride along with a good one. Save the current `.tex`, PDF and `resume.json` as old, then apply, rebuild and parse into `R/new/`.
 3. **Gates.** Run the truth gate and every sharp check on the new version. A failure drops the change (restore old) and the round counts as not kept.
-4. **Paired vote.** `rules.py --brief --settings .resumekit.json > R/rules-brief.txt`. For run `i` = 1 to 10:
+4. **Paired vote.** `rules.py --brief --settings K > R/rules-brief.txt`. For run `i` = 1 to 10:
    - `vote.py judge-prep <old.json> <new.json> <old.pdf> <new.pdf> --seed <round x 100 + i> --out R/judge-<i> --posting P/posting.txt --rules R/rules-brief.txt`. Every run gets its own new folder; judge-prep refuses one that isn't empty.
    - Launch one `resume-kit:resume-judge` agent with only this brief: "Your folder is <abs R/judge-i>. Read only its six files and reply as your instructions say." Never a general-purpose agent: the judge must not be able to run commands or see another run's verdict.
    - Save its reply exactly as returned to `R/judge-<i>/verdict.json` (strip only a code fence). `L record-runs 1`.

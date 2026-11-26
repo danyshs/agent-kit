@@ -4,7 +4,7 @@
 
 ## The brief
 
-1. `rules.py --fuzzy --settings .resumekit.json > R/rules-fuzzy.txt`.
+1. `rules.py --fuzzy --settings K > R/rules-fuzzy.txt`.
 2. If `P/locks.json` doesn't exist, write `{"locks": []}` there.
 3. The brief, the same for all 5 runs, is only these lines (no summary of the resume, no opinion of yours, nothing from this conversation; the scorer judges the page alone):
 

@@ -4,7 +4,9 @@
 # ///
 """The sharp page checks: each one is keyed by its rule ID and reads its lists from the rule.
 
-Usage: lint.py <resume.json> <pdf> --settings <.resumekit.json> --out <findings.json>
+Usage: lint.py <resume.json> <pdf> --settings <resume.resumekit.json> --out <findings.json>
+       lint.py body-font <pdf>                     the body font size, which setup records
+       lint.py same-text <before.pdf> <after.pdf>   0 same text, 1 different (setup's marker check)
        lint.py --self-test
 Exit 0 no findings, 1 findings, 2 bad input or a cap hit, 3 missing package.
 """
@@ -12,6 +14,7 @@ Exit 0 no findings, 1 findings, 2 bad input or a cap hit, 3 missing package.
 from __future__ import annotations
 
 import datetime
+import difflib
 import re
 import sys
 import unicodedata
@@ -548,11 +551,25 @@ def text_order(ctx: Ctx, p: dict[str, Any], sev: str) -> list[Finding]:
     return out
 
 
+def body_size(pdf: Pdf) -> float:
+    """Page 1's most common character size: the body font, whatever the headings use."""
+    assert pdf.fonts, "no font sizes read from page 1"
+    return Counter(pdf.fonts).most_common(1)[0][0]
+
+
+def cmd_body_font(pdf_path: Path) -> int:
+    pdf = read_pdf(pdf_path)
+    if not pdf.fonts:
+        raise InputError(f"{pdf_path}: no text on page 1 to measure")
+    print(body_size(pdf))
+    return 0
+
+
 def body_font(ctx: Ctx, _p: dict[str, Any], sev: str) -> list[Finding]:
     want = ctx.settings.body_font_pt
     if want is None or not ctx.pdf.fonts:
         return []
-    got = Counter(ctx.pdf.fonts).most_common(1)[0][0]
+    got = body_size(ctx.pdf)
     if got >= want - 0.05:
         return []
     why = "a shrunk body font is the first thing a reviewer spots"
@@ -706,6 +723,29 @@ def check_agreement(r: rp.Resume, pdf: Pdf) -> None:
             f"the PDF doesn't show {len(bad)} parsed texts ({shown}). Rebuild the PDF from this"
             " .tex; if it is current, the parser misread it: report it as a bug"
         )
+
+
+SAME_TEXT_LINES_MAX = 40  # diff lines shown; the first difference is what setup needs
+
+
+def same_text(before: Pdf, after: Pdf) -> list[str]:
+    """The diff between two builds' text, page by page; empty means the markers changed nothing
+    a reader sees. A macro that reads its argument twice shows up here as doubled text."""
+    a = [f"p{i + 1}: {ln}" for i, page in enumerate(before.lines) for ln in page]
+    b = [f"p{i + 1}: {ln}" for i, page in enumerate(after.lines) for ln in page]
+    assert a or b, "both PDFs empty: read_pdf let a blank page through"
+    diff = list(difflib.unified_diff(a, b, "before", "after", lineterm="", n=0))
+    return diff[:SAME_TEXT_LINES_MAX]
+
+
+def cmd_same_text(before: Path, after: Path, read: Callable[[Path], Pdf] = read_pdf) -> int:
+    diff = same_text(read(before), read(after))
+    if not diff:
+        print(f"same text: {after} reads exactly as {before}")
+        return 0
+    print("\n".join(diff))
+    print(f"different text: {after} doesn't read as {before}", file=sys.stderr)
+    return 1
 
 
 def make_ctx(r: rp.Resume, pdf: Pdf, settings: common.Settings, years: float, now: YM) -> Ctx:
@@ -998,7 +1038,24 @@ def test_cap() -> None:
         assert "hit" in str(e)
 
 
+def test_same_text() -> None:
+    """Setup's marker check: identical text passes; doubled, moved or lost text fails, and
+    a line moved to page 2 counts as different."""
+    base = Pdf("a", [["Jane Doe", "Built X"], ["Skills"]])
+    assert same_text(base, Pdf("b", [["Jane Doe", "Built X"], ["Skills"]])) == []
+    for other in (
+        [["Jane Doe", "Built XBuilt X"], ["Skills"]],
+        [["Jane Doe"], ["Built X", "Skills"]],
+        [["Jane Doe", "Built X"], []],
+    ):
+        assert same_text(base, Pdf("b", other)), other
+    pdfs = {"a": base, "b": Pdf("b", [["Jane Doe", "Built X"], ["Skills"]]), "c": Pdf("c", [["x"]])}
+    assert cmd_same_text(Path("a"), Path("b"), lambda p: pdfs[p.name]) == 0
+    assert cmd_same_text(Path("a"), Path("c"), lambda p: pdfs[p.name]) == 1
+
+
 TESTS = (
+    test_same_text,
     test_pages,
     test_fill,
     test_blank,
@@ -1023,6 +1080,10 @@ def main(argv: list[str]) -> int:
     try:
         if argv == ["--self-test"]:
             return self_test()
+        if len(argv) == 2 and argv[0] == "body-font":
+            return cmd_body_font(Path(argv[1]))
+        if len(argv) == 3 and argv[0] == "same-text":
+            return cmd_same_text(Path(argv[1]), Path(argv[2]))
         if len(argv) == 6 and argv[2] == "--settings" and argv[4] == "--out":
             return run(Path(argv[0]), Path(argv[1]), Path(argv[3]), Path(argv[5]))
         print(__doc__, file=sys.stderr)

@@ -8,7 +8,8 @@ EXCLUDE='^tools/evals/(skills|planted|runs|hidden|value)/'
 failed=0
 
 # tracked files matching the globs, minus EXCLUDE, one per line
-files() { git ls-files -- "$@" | grep -Ev "$EXCLUDE" || true; }
+# new files too: a file not yet added to git must not pass by being unseen
+files() { git ls-files --cached --others --exclude-standard -- "$@" | grep -Ev "$EXCLUDE" || true; }
 
 # check NAME COUNT CMD...: runs CMD, shows its tail on failure
 check() {
