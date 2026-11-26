@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = []
+# dependencies = ["strictyaml==1.6.2", "yamllint==1.38.0", "pypdf==7.1.1"]
 # ///
 """The rules ledger: which ruling is active for each rule, and the flexible-mode edits.
 
@@ -22,7 +22,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # sibling module, not a package
@@ -58,6 +58,9 @@ class Rule:
     severity: str
     allows_lock: bool
     rulings: list[Ruling] = field(default_factory=list[Ruling])
+    params: dict[str, Any] = field(
+        default_factory=dict[str, Any]
+    )  # the check's lists and thresholds
 
     def active(self) -> Ruling | None:
         """None when the rule's last ruling removes it."""
@@ -98,6 +101,10 @@ def rule_from(d: dict[str, Any], where: str) -> Rule:
     if rule.kind not in KINDS or rule.severity not in common.SEVERITIES:
         raise InputError(f"{where}: rule {rule.id}: bad kind or severity")
     rule.rulings = [ruling_from(x, f"{where}:{rule.id}") for x in d.get("rulings", [])]
+    params: Any = d.get("params") or {}
+    if not isinstance(params, dict):
+        raise InputError(f"{where}: rule {rule.id}: params must be an object")
+    rule.params = cast(dict[str, Any], params)
     if not rule.rulings:
         raise InputError(f"{where}: rule {rule.id} has no rulings")
     return rule

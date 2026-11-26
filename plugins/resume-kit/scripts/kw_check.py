@@ -174,15 +174,7 @@ def check_group(members: list[Keyword], page: str, facts: list[evidence.Fact]) -
                 f"work {primary.spellings[0]!r} onto the page",
             )
         ]
-    return [
-        kw_finding(
-            "nit",
-            f"{k.spellings[0]!r} (OR-group {k.group}) is backed but not on the page",
-            "optional: one member already covers the group",
-        )
-        for k in claims
-        if k not in shown
-    ]
+    return []  # one backed member covers the group; siblings cost nothing (RB OR-group ruling)
 
 
 def keywords(
@@ -281,7 +273,6 @@ def self_test() -> int:
         ("major", "'Docker'"),
         ("major", "'Kafka'"),
         ("nit", "'Java'"),
-        ("nit", "'Rust'"),
     ], got
     assert {w.keyword for w in warns} >= {"Python", "Java", "Kafka"}, warns
     print("self-test passed")

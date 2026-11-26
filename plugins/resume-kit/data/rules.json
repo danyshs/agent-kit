@@ -1,0 +1,2734 @@
+{
+ "rules": [
+  {
+   "id": "pages",
+   "kind": "sharp",
+   "check": "lint.pages",
+   "severity": "blocker",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Verify the page budget; a second page with a few dangling lines is a major or blocker.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "dangling_lines": "1-3"
+     }
+    },
+    {
+     "text": "A one-page resume must never go over one page.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Rendered PDF must be one page with balanced margins and a prominent header.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "page-length",
+   "kind": "sharp",
+   "check": "lint.page_length",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "paid_years_under": 5
+   },
+   "rulings": [
+    {
+     "text": "A no page limit setting does not override industry norms; three or more pages is a major outside academic roles.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "pages_over": 2,
+      "severity": "major"
+     }
+    },
+    {
+     "text": "Under four years of paid software work, a second page is a major.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "paid_years_under": 4,
+      "severity": "major"
+     }
+    },
+    {
+     "text": "Under four to five years, the one-page ceiling is hard; five or more years may use two pages only if page 1 stands alone and page 2 is at least 40 percent full of high-signal content.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "one_page_under_years": "4-5",
+      "two_pages_min_years": 5,
+      "page2_min_fill_pct": 40,
+      "max_pages": 2
+     }
+    }
+   ]
+  },
+  {
+   "id": "page2-fill",
+   "kind": "sharp",
+   "check": "lint.page2_fill",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "major_under_pct": 40,
+    "fine_from_pct": 55,
+    "years_min": 5
+   },
+   "rulings": [
+    {
+     "text": "A second page under about 40 percent full reads as failed compression and is a major.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "fill_pct_under": 40,
+      "severity": "major"
+     }
+    },
+    {
+     "text": "A second page 40 to 55 percent full on an eligible 5+ year profile is a nit; never force-fill it.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "fill_pct": "40-55",
+      "severity": "nit",
+      "years_min": 5
+     }
+    },
+    {
+     "text": "A second page at least 60 percent full on an eligible 5+ year profile is fine.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "fill_pct_min": 60,
+      "severity": "none"
+     }
+    }
+   ]
+  },
+  {
+   "id": "spill",
+   "kind": "sharp",
+   "check": "lint.spill",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "bullet_glyphs": [
+     "•"
+    ],
+    "words_max": 2
+   },
+   "rulings": [
+    {
+     "text": "Check the built page for orphan one- or two-word line wraps.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 23,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "No bullet may end on an orphan of one or two words.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 24,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "No orphan one- or two-word wraps.",
+     "version": 12,
+     "after_audits": false,
+     "absorbed_seq": 20,
+     "source": "reviewer v12",
+     "params": null
+    },
+    {
+     "text": "No bullet or skills line may end on a one- or two-word orphan line.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "orphan_words": "1-2"
+     }
+    },
+    {
+     "text": "No bullet or skills line ends in a one- or two-word orphan.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "links",
+   "kind": "sharp",
+   "check": "lint.links",
+   "severity": "major",
+   "allows_lock": true,
+   "params": {
+    "contact_hosts": [
+     "github.com"
+    ],
+    "linked_kinds": [
+     "projects",
+     "research"
+    ],
+    "pending_severity": "nit"
+   },
+   "rulings": [
+    {
+     "text": "A named project entry should carry a clickable link to its repo, PR or write-up.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Every project should link to its public repo, PR or issue.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Check embedded link annotations; projects making high-scrutiny claims should be clickable.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Link the top projects first; flagship entries without links block quick verification.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "Deep technical claims are more credible with a direct link to the commits or issue reports.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Add working links for every project, paper and PR to raise verifiable proof.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "A link deliberately withheld until a repo is public is a nit; attach it once published.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Link a project once its code is public; the missing link is a nit.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "A link withheld until a repo is public is a nit.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 13,
+     "source": "reviewer v6",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Attach public links to flagship repos and papers on the sheet.",
+     "version": 5,
+     "after_audits": true,
+     "absorbed_seq": 15,
+     "source": "reviewer v5 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A withheld link for an unpublished repo is only a nit.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Link when public; until then a nit.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 4,
+     "source": "reviewer v7",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Count and verify embedded clickable links in the built PDF.",
+     "version": 11,
+     "after_audits": false,
+     "absorbed_seq": 7,
+     "source": "reviewer v11",
+     "params": null
+    },
+    {
+     "text": "An unpublished repo link is no reason to hold a ready sheet; attach it later.",
+     "version": 11,
+     "after_audits": false,
+     "absorbed_seq": 7,
+     "source": "reviewer v11",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "A pending link for an unpublished repo is a nit.",
+     "version": 11,
+     "after_audits": false,
+     "absorbed_seq": 1,
+     "source": "reviewer v11",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Do not block submission on an unpublished repo link.",
+     "version": 12,
+     "after_audits": false,
+     "absorbed_seq": 20,
+     "source": "reviewer v12",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Header contact links must work and be embedded.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Every flagship paper, repo and external PR needs a working embedded link.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Link the specific proof item, not a profile page.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A link deliberately withheld until publication is a single nit, not a failure.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "pending_link_severity": "nit"
+     }
+    },
+    {
+     "text": "Extracted link annotations show working links on header contacts and all public repos, papers and PRs.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "blank-months",
+   "kind": "sharp",
+   "check": "lint.blank_months",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "window_months": 60,
+    "none_through": 3,
+    "nit_through": 6,
+    "blocker_over": 12,
+    "trailing_blocker_over": 9,
+    "mid_level_years": 5,
+    "historical_nit_through": 9
+   },
+   "rulings": [
+    {
+     "text": "A long stretch without paid software work after an unrelated program draws scrutiny of the timeline.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Unexplained multi-year gaps are flagged fast, so recent dated work should cover the span; research bullets are judged on methodology.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "A multi-year stretch with no paid software work draws skepticism unless dated technical activity is visible across it.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A long stretch between paid roles stays a nit when dated volunteer work and study partly cover it.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": {
+      "severity": "nit"
+     }
+    },
+    {
+     "text": "Fill multi-year visual gaps with dated, verifiable work so the timeline has no empty stretch on a quick scan.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "An empty gap between study and recent work is rejected before projects are read; fill it with verified dated entries such as volunteer work, hackathons, research and merged open-source PRs.",
+     "version": 5,
+     "after_audits": true,
+     "absorbed_seq": 15,
+     "source": "reviewer v5 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Measure blank time across all dated sections, not only between paid roles, and judge trailing gaps more strictly.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "No gap penalty inside an active degree window.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "months": "any",
+      "severity": "none",
+      "where": "pre-graduation"
+     }
+    },
+    {
+     "text": "Zero to three blank months after graduation is normal and never flagged.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "months": "0-3",
+      "severity": "none"
+     }
+    },
+    {
+     "text": "Four to six blank months is a nit for early-career and nothing at mid-level.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "months": "4-6",
+      "severity": "nit (early career) / none (mid-level)"
+     }
+    },
+    {
+     "text": "Seven to twelve blank months is a major; a historical 7-9 month gap followed by continuous work drops to a nit.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "months": "7-12",
+      "severity": "major",
+      "historical_7_9": "nit"
+     }
+    },
+    {
+     "text": "Over twelve blank months, or over nine trailing to the present, is a blocker.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "months": ">12 or >9 trailing",
+      "severity": "blocker"
+     }
+    },
+    {
+     "text": "A long gap between paid roles on an early-career resume is a nit when dated research, projects or open source bridge it.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "nit or none"
+     }
+    },
+    {
+     "text": "Compute the longest interval with no dated entry in any section, apply thresholds to it, then check paid-role gaps for mid-level targets.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A multi-year visual gap causes drop-off; fill gaps with verified engineering work such as volunteer work, hackathon wins, research and merged PRs.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "No unexplained multi-month or multi-year blank gaps in recent history.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "short-stint-label",
+   "kind": "sharp",
+   "check": "lint.short_stints",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "months_under": 6,
+    "labels": [
+     "contract",
+     "intern",
+     "co-op",
+     "volunteer",
+     "term",
+     "part-time",
+     "freelance"
+    ]
+   },
+   "rulings": [
+    {
+     "text": "A short or fixed-scope engagement must be labeled as a contract (or volunteer role) so it does not read like a failed full-time job.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A very short recent role with thin output reads like a failed probation unless it is labeled as a scoped contract.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Label short contracts and unpaid roles; never present them as continuous full-time employment.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "exp-order",
+   "kind": "sharp",
+   "check": "lint.exp_order",
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Experience must be reverse-chronological by start date.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Experience is strictly newest start first.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "section-order-soft",
+   "kind": "sharp",
+   "check": "lint.order_soft",
+   "severity": "nit",
+   "allows_lock": true,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Sections other than Experience default to newest first; relevance may override that per posting.",
+     "version": 15,
+     "after_audits": true,
+     "absorbed_seq": 25,
+     "source": "author rule file (2026-11-24)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "skills-backed",
+   "kind": "sharp",
+   "check": "lint.skills_backed",
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A language listed in the skills section must be backed by real work visible on the page; one with no supporting bullet is flagged.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Remove any skill, language or practice that no shipped bullet supports, and align the skills list to what you can defend in an interview.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Every skill in the skills section needs at least one bullet backing it.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Reviewers check every listed skill against the bullets; orphaned skills read as stale keyword stuffing or unverified claims.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "When a bullet is deleted, drop any skill whose only backing bullet it was.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Sub-skills named in parentheses need to appear in a bullet, or come off the skills line.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "After each edit, audit the skills section against the bullets that remain on that sheet.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "A skill whose only bullet was removed becomes an orphan and must come off.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Close an orphaned skill by adding a bullet that exercises it or removing the skill.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Remove a practice from the skills section when no bullet backs it.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "A practice in the skills line with no mention in any bullet should be dropped or tied to a bullet.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 13,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "When adding a project back, also update the skills line for the languages it brings.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 5,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Every listed skill must trace to a concrete bullet.",
+     "version": 11,
+     "after_audits": false,
+     "absorbed_seq": 7,
+     "source": "reviewer v11",
+     "params": null
+    },
+    {
+     "text": "Do not add a language to the skills line without production bullets behind it.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Every item in the skills section must be backed by at least one bullet.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "After deleting a bullet, drop any skill whose only backing it was.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Every skills and subtitle token is proven in at least one bullet.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "tags-in-languages",
+   "kind": "sharp",
+   "check": "lint.tags_in_languages",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "languages": [
+     "Python",
+     "C",
+     "C++",
+     "C#",
+     "Java",
+     "Kotlin",
+     "Rust",
+     "Go",
+     "SQL",
+     "R",
+     "JavaScript",
+     "TypeScript",
+     "Swift",
+     "Ruby",
+     "PHP",
+     "Scala",
+     "Bash",
+     "Lua",
+     "Zig",
+     "MATLAB",
+     "Julia"
+    ]
+   },
+   "rulings": [
+    {
+     "text": "A language named in an entry heading is listed on the Languages line.",
+     "version": 15,
+     "after_audits": true,
+     "absorbed_seq": 25,
+     "source": "author rule file (2026-11-24)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "about-form",
+   "kind": "sharp",
+   "check": "lint.about_form",
+   "severity": "nit",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Use one form for approximate values: a plain tilde, not math sim symbols mixed with the word about.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Use a single plain tilde for approximations throughout.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "text-order",
+   "kind": "sharp",
+   "check": "lint.text_order",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "headings": [
+     "Technical Skills",
+     "Skills",
+     "Experience",
+     "Research",
+     "Projects",
+     "Education"
+    ]
+   },
+   "rulings": [
+    {
+     "text": "Contact details must survive plain-text extraction: write out the profile URLs rather than relying on icons alone.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Contact icons must be paired with written-out URLs so plain-text extraction keeps them.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Extracted text must read in a single column in order.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Extracted text needs clean punctuation, no broken ligatures, garbled glyphs, tables or text boxes.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Use standard section headings that ATS parsers segment cleanly.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "headings": [
+       "Technical Skills",
+       "Experience",
+       "Research",
+       "Projects",
+       "Education"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "body-font",
+   "kind": "sharp",
+   "check": "lint.body_font",
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Never shrink body fonts or collapse the header to fit more lines.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "weak-opener",
+   "kind": "sharp",
+   "check": "lint.weak_opener",
+   "severity": "nit",
+   "allows_lock": false,
+   "params": {
+    "weak": [
+     "Took",
+     "Got",
+     "Ran",
+     "Matched",
+     "Met",
+     "Fixed",
+     "Helped",
+     "Worked on",
+     "Hit"
+    ]
+   },
+   "rulings": [
+    {
+     "text": "Do not open bullets with casual verbs like Got; use concrete engineering verbs.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": {
+      "weak": [
+       "Got"
+      ]
+     }
+    },
+    {
+     "text": "Replace weak openers like Took, Got, Matched and Ran with outcome verbs.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": {
+      "weak": [
+       "Took",
+       "Got",
+       "Matched",
+       "Ran"
+      ],
+      "strong": [
+       "Unblocked",
+       "Shipped",
+       "Auto-picked",
+       "Kept"
+      ]
+     }
+    },
+    {
+     "text": "Lead with a strong active engineering verb and avoid filler openers and passive duties.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "weak": [
+       "Took",
+       "Got",
+       "Ran",
+       "Met"
+      ]
+     }
+    },
+    {
+     "text": "Casual openers like Hit weaken a bullet.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "weak": [
+       "Hit"
+      ]
+     }
+    },
+    {
+     "text": "Weak verbs and symptom-first framing fail the outcome slot; a count of attempts is not an outcome.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "weak": [
+       "Took"
+      ]
+     }
+    },
+    {
+     "text": "Passive weak openers hide the functional outcome.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "weak": [
+       "Got"
+      ]
+     }
+    },
+    {
+     "text": "Passive openers and leading with raw activity fail the outcome slot.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "weak": [
+       "Took",
+       "Got",
+       "Ran",
+       "Matched",
+       "Met",
+       "Worked on",
+       "Helped",
+       "Fixed"
+      ]
+     }
+    },
+    {
+     "text": "Replace weak verbs; a shared-credit verb is acceptable only when truthful attribution needs it.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "weak": [
+       "Took",
+       "Got",
+       "Ran",
+       "Matched",
+       "Met",
+       "Fixed",
+       "Helped",
+       "Worked on",
+       "Co-built"
+      ],
+      "strong": [
+       "Unblocked",
+       "Cut",
+       "Eliminated",
+       "Prevented",
+       "Automated",
+       "Reached",
+       "Auto-picked",
+       "Stopped",
+       "Held",
+       "Shipped",
+       "Averaged",
+       "Verified",
+       "Restored",
+       "Won"
+      ]
+     }
+    },
+    {
+     "text": "Every bullet starts with a concrete outcome verb.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "slop-counts",
+   "kind": "sharp",
+   "check": "lint.slop_counts",
+   "severity": "major",
+   "allows_lock": false,
+   "params": {
+    "patterns": [
+     "\\b\\d[\\d,.]*\\s*k?\\s+(?:lines|LOC)\\b",
+     "\\b\\d[\\d,]*\\s+(?:unit\\s+|mutation\\s+|integration\\s+)?tests\\b",
+     "\\b\\d[\\d,]*\\s+mutants\\b",
+     "CI-verified",
+     "merged via code review"
+    ]
+   },
+   "rulings": [
+    {
+     "text": "Line counts on a project and agent-authorship phrasing make a resume read as bloated; leaving them off is cleaner.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Line-of-code bragging on projects and unbacked skill keywords are standard rejection triggers.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Presenting agent-built work through test counts and harness mechanics invites AI-slop skepticism; show engineering judgment instead.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Large line counts and test counts on an agent-assisted project signal bloat rather than engineering strength.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Test and mutant counts on a small utility read as inflation.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "Synthetic-sounding mutation and unit-test counts should come off the page.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "A clause like merged via code review and a CI gate describes merge hygiene, not an outcome.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Frame CI as ownership of the gate you set up, not as a merge-review checklist.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Trailing clauses such as passed review or built from a reviewed design doc read like process notes, not outcomes.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 4,
+     "source": "reviewer v7",
+     "params": {
+      "note": "later called a gray zone when it backs a posting keyword"
+     }
+    },
+    {
+     "text": "State ownership of the CI setup rather than reporting that a PR passed review.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 5,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Raw line counts and test counts on an agent-assisted repo read as vanity metrics; name a concrete engineering property instead.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 23,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "A line count on an open external PR and a test count behind strong operational metrics were judged harmless.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 23,
+     "source": "reviewer v13",
+     "params": {
+      "reversed_by": "later versions and rulebook"
+     }
+    },
+    {
+     "text": "Drop line counts from unmerged pull requests; say what the fix does.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 24,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "All controllable vanity counts should be off the page before submission.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 24,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "Showing line and test counts for a shipped project was judged acceptable.",
+     "version": 11,
+     "after_audits": false,
+     "absorbed_seq": 1,
+     "source": "reviewer v11",
+     "params": {
+      "reversed_by": "v13, v14 and rulebook"
+     }
+    },
+    {
+     "text": "A bullet carrying line and test counts for a co-built project was judged resolved.",
+     "version": 12,
+     "after_audits": false,
+     "absorbed_seq": 20,
+     "source": "reviewer v12",
+     "params": {
+      "reversed_by": "v13, v14 and rulebook"
+     }
+    },
+    {
+     "text": "Remove size and test counts from co-built repos as an AI-slop flag.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 21,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "Line counts on an open PR and test counts behind strong metrics were judged non-blocking.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 21,
+     "source": "reviewer v13",
+     "params": {
+      "reversed_by": "v14 and rulebook"
+     }
+    },
+    {
+     "text": "Remove unit-test counts and unmerged-PR line counts while keeping keyword coverage.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 22,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "A list of CI tools is not a measure of result.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Report volume and test counts as scale evidence.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "reversed_by": "v13, v14 and rulebook"
+     }
+    },
+    {
+     "text": "Showing project size and counts as scale evidence was recommended.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "reversed_by": "v13, v14 and rulebook"
+     }
+    },
+    {
+     "text": "Do not show line counts for personal or agent-assisted projects.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "pattern": "line-of-code counts on projects"
+     }
+    },
+    {
+     "text": "Do not show line counts on unmerged pull requests; say what the fix does.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "pattern": "line counts on unmerged PRs"
+     }
+    },
+    {
+     "text": "Do not show raw unit-test or mutation-test counts.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "pattern": "unit-test and mutation-test counts"
+     }
+    },
+    {
+     "text": "Do not add trailing clauses about review and merge hygiene.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "patterns": [
+       "CI-verified",
+       "merged via code review",
+       "reviewed design doc clause"
+      ]
+     }
+    },
+    {
+     "text": "Frame CI as ownership of the gate you set up, and only when it backs a listed skill.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Remove line and test counts on an agent-co-built app.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "remove"
+     }
+    },
+    {
+     "text": "Remove test counts that sit beside stronger cost and cap proof.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "remove"
+     }
+    },
+    {
+     "text": "Remove line counts on an open PR.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "remove"
+     }
+    },
+    {
+     "text": "Remove CI-verified checklist clauses.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "remove"
+     }
+    },
+    {
+     "text": "No repo line counts, unmerged-PR line counts, raw test or mutant counts, or merge-checklist buzzwords.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "keywords",
+   "kind": "sharp",
+   "check": "kw_check.keywords",
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Do not copy a posting's keywords into the skills section when nothing on the page backs them; reviewers spot this at once.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Technologies actually used in bullets belong in the skills section too, including the named ML framework.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Add keywords the bullets already back (retrieval, embeddings, vector search) to the skills section; missing them costs free ATS matches.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 13,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Add technologies a bullet exercises, such as retrieval and vector-search tools, to the skills section for keyword coverage.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Add exercised technologies to the skills section as ATS keywords.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Posting phrases like A or B and example lists are alternatives; satisfying one covers the others.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "An OR-group or example list already met by one backed member carries no severity for the others.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "none",
+      "evidence_state": "any"
+     }
+    },
+    {
+     "text": "A standalone required language with strong recent evidence that is left off the page is a major to fix by adding a backing bullet.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "major"
+     }
+    },
+    {
+     "text": "Treat A-or-B and one-or-more lists as OR-groups and charge nothing for siblings once one member is backed.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Keep every required posting keyword when cutting for space.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "retention_pct": 100
+     }
+    },
+    {
+     "text": "High-signal technologies practiced in bullets appear in the skills section; duplicate wrapping terms are trimmed.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Promote keywords that bullets exercise into the skills section.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "underclaim",
+   "kind": "sharp",
+   "check": "evidence.underclaim",
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "For ML roles, name the framework, data scale, training or serving setup and evaluation used, not only the headline result.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Do not cut the strongest production-work bullets from a sheet when they exist on a sibling version; restore them.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Do not strip the strongest comparative result and method detail from a research entry; name framework, data and compute scale.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "When a bullet loses its outcome, add a verifiable scope detail such as team size or delivery target.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A research or ML result should list corpus scale and training stack next to the headline result.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "State dataset size, compute and your own contribution inside a team-trained result.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A pipeline-fix bullet should state the scale it protected.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 4,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Anchor pipeline work to the volume it served.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 5,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "When two bullets cover one effort, merge them so the verified measure covers both.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "A bare Fixed with no scale reads like a single small ticket; add the verified scale.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "duty-filler",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A bullet that stops at diagnosis without saying what landed or changed lacks an outcome.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A debugging bullet that stops at diagnosis must say what fix or outcome landed.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A mechanism clause must name what was actually done or tested, not a vague phrase.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A bullet that diagnoses a problem should also report the fix and the result after it.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A bullet that describes a feature instead of an accomplishment fails the outcome slot.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Meeting a baseline duty is not an accomplishment; show proactive engineering and its scale.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "A bullet without a measure passes only if it is a sharp outcome plus mechanism that names a real engineering property, and the page elsewhere carries strong numbers.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "y-measures-claim",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A speedup or score is weak evidence if its sample is tiny or it drops quality unmeasured; report the quality measure alongside it on a meaningful eval set.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A safety or guardrail claim should carry evaluation numbers (test-suite size, block rate, false-positive rate), not just a description of the guards.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A tiny sample and a speedup from switching a setting off need accuracy or quality reported with them to count as evidence.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Do not advertise a tiny test set as proof of quality parity; drop the parenthetical or back it with a real benchmark.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": {
+      "older_view": "remove the sample size"
+     }
+    },
+    {
+     "text": "A latency win from turning off a feature needs an accompanying quality measure to be meaningful.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "For ML roles, evaluation rigor matters; a very small test set presented as proof signals toy-scale evaluation.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Safety work claims need red-team size, attack-success change and false-refusal numbers to read as systematic.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Safety claims relying only on prompt text need evaluation counts and code-level checks to be credible.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A latency claim without a quality or regression measure is only half a measurement.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "Write each bullet as an accomplishment, the measure of it, then the action that delivered it, in that order.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": {
+      "order": [
+       "X outcome",
+       "Y measure",
+       "Z mechanism"
+      ]
+     }
+    },
+    {
+     "text": "The measure must show how big or well verified the outcome was, not a bare activity count.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Join the mechanism to the outcome with by, not with.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Lead with the outcome, not the activity or its cost.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Lead with the user outcome so outcome, measure and mechanism read in order.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Use the accomplishment, measure, action formula for bullets.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A flagship claim needs a measure; opaque units and activity counts unrelated to value fail it.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Connect the mechanism to the outcome with by, not with.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "gray-zone-count",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "nit",
+   "allows_lock": true,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A raw volume count that is trivially produced by the hardware inflates the claim; cut it.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": {
+      "status": "older view: delete"
+     }
+    },
+    {
+     "text": "Do not force a numeric measure onto a bullet; a clean outcome plus mechanism bullet passes when the rest of the page has real numbers.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 23,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "Add a measure to such a bullet only when real user or runtime data exists.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 23,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "A hardware measurement count that reflects real test volume, not code size, is a defensible gray-zone item.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 24,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "An outcome-plus-mechanism bullet without a number beats a forced measure, when stronger numbers elsewhere anchor the page.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 21,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "Add a measure only with real runtime or adoption data.",
+     "version": 13,
+     "after_audits": false,
+     "absorbed_seq": 21,
+     "source": "reviewer v13",
+     "params": null
+    },
+    {
+     "text": "Authorship-scoping and design-doc clauses may stay on a track when they keep authorship truthful or back required keywords.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 22,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "When a bullet has no honest outcome measure, leave the measure off rather than inventing a vanity one.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Add a measure back only when real external metrics exist.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Separate real slop counts from defensible gray-zone items before cutting signal.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Keep specific failure evidence that proves root-cause isolation.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "keep"
+     }
+    },
+    {
+     "text": "An iteration count may stay only when immediately followed by the concrete fixes.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "keep if paired with causes"
+     }
+    },
+    {
+     "text": "A hardware sweep volume is a gray-zone item; optional to trim.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "gray zone",
+      "reverses": "earlier advice to delete"
+     }
+    },
+    {
+     "text": "An authorship-scoping clause stays when it keeps credit honest.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "gray zone"
+     }
+    },
+    {
+     "text": "A design-doc clause is acceptable only when it deliberately backs a required keyword on that track.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "verdict": "gray zone",
+      "conflicts_with": "merge-hygiene ban"
+     }
+    },
+    {
+     "text": "No vanity measure is invented to fill the slot.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "project-order",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": true,
+   "params": null,
+   "rulings": [
+    {
+     "text": "On a role-specific sheet, projects unrelated to the posting's domain should not dominate the section, especially unlinked ones.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "On a GenAI posting, lead Projects with LLM evals, guardrails, embeddings and retrieval before unrelated systems work.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 13,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Order projects by relevance to the posting; the most relevant work goes first.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 4,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Project order should put the posting's core themes first so a recruiter sees them first.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 5,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Lead Projects with the entries most relevant to the posting.",
+     "version": 12,
+     "after_audits": false,
+     "absorbed_seq": 20,
+     "source": "reviewer v12",
+     "params": null
+    },
+    {
+     "text": "Order projects by relevance to the posting, not by date.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "For LLM roles, lead with eval, guardrail and retrieval projects, ahead of unrelated systems work.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "For systems and early-career roles, lead with deep low-level debugging work.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Projects are ordered by relevance to the posting.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "tag-unbacked",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A language named only in a project subtitle, with no bullet showing work in it, counts as unbacked.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A language in a project tag and a practice in the skills line must each be backed by a bullet or removed.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "A language left in a project tag with no bullet behind it looks like a leftover from another draft.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Project tech tags must be backed by a bullet too.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "plain-english",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Phrase bullets in precise engineering terms, not conversational wording.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Express costs and savings in portable units (dollars, tokens, percentages) rather than vendor-specific counters.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Replace casual phrasing with precise production-monitoring terms.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Do not use opaque platform counters; give dollars, tokens or time.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 9,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "Cost figures need a baseline in dollars, tokens or percent.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Avoid first-person casual phrasing in impact bullets; use formal engineering wording.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Normalize costs to dollars, tokens or time.",
+     "version": 4,
+     "after_audits": false,
+     "absorbed_seq": 3,
+     "source": "reviewer v4",
+     "params": null
+    },
+    {
+     "text": "Do not compress concrete root causes into a bare count; the specific causes are what make the bullet stand out.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Say what an open pull request does and in which language so a screener sees it at once.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Replace raw constants and flags with plain engineering terms, and fix domain typos that change the meaning.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "A bare bug count should name two or three of the actual fixes.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Remove raw flag names and fix typos that change meaning.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Name the specific fixes behind a bug count.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": null
+    },
+    {
+     "text": "Name the concrete engineering pieces behind a vague specs and gates clause.",
+     "version": 8,
+     "after_audits": false,
+     "absorbed_seq": 11,
+     "source": "reviewer v8",
+     "params": {
+      "note": "suggests terms later banned as insider jargon"
+     }
+    },
+    {
+     "text": "Swap vague run counts and vendor units for portable metrics such as test counts, dollars and token caps.",
+     "version": 5,
+     "after_audits": true,
+     "absorbed_seq": 15,
+     "source": "reviewer v5 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Name the exact metric (for example sales lift) instead of a vague word like gain.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "A bare bug count hides the real engineering; name the causes.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Do not compress concrete root causes into a count.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Replace raw flags and internal names with plain engineering concepts.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Fix domain-specific typos that change meaning.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Do not use undefined tool-specific vocabulary.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "examples": [
+       "symptom-trigger tree",
+       "credits",
+       "layered prompt guards",
+       "worktree agent gates"
+      ]
+     }
+    },
+    {
+     "text": "No opaque insider names, raw flags or domain typos.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "header-matches-bullets",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A project entry must hold only bullets that belong under its heading; unrelated work needs its own heading.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "A standalone tool bullet under an unrelated project title mixes projects; split them or use an accurate umbrella heading.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "When two related bullets share an entry, give the entry an umbrella heading that covers both.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 14,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "Rename a project entry to an umbrella heading when its bullets cover related but distinct work.",
+     "version": 7,
+     "after_audits": false,
+     "absorbed_seq": 10,
+     "source": "reviewer v7",
+     "params": null
+    },
+    {
+     "text": "Use an accurate umbrella heading for combined bullets and keep the concrete cause details.",
+     "version": 6,
+     "after_audits": false,
+     "absorbed_seq": 13,
+     "source": "reviewer v6",
+     "params": null
+    },
+    {
+     "text": "A bullet under a heading about a different topic needs an umbrella heading or its own entry.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Do not put an unrelated bullet under a narrow project title; split the entry or use an accurate umbrella heading.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "best-work-page1",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "The strongest content must be on page 1, since humans decide there.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "major"
+     }
+    }
+   ]
+  },
+  {
+   "id": "truth-wording",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Strip authorship and size phrasing that undersells or pads the work; state architecture and concrete bugs caught instead.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A clause that scopes authorship truthfully may stay even if it reads slightly formal.",
+     "version": 14,
+     "after_audits": false,
+     "absorbed_seq": 24,
+     "source": "reviewer v14",
+     "params": null
+    },
+    {
+     "text": "The mechanism clause must name every real cause so the result is not credited to one change alone.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "In team work, the mechanism clause should name your own contribution, not a team verb.",
+     "version": 5,
+     "after_audits": false,
+     "absorbed_seq": 16,
+     "source": "reviewer v5",
+     "params": null
+    },
+    {
+     "text": "Never stretch paid tenure beyond real dates.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Never present roadmap ideas or unbuilt features as shipped work.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "When agents wrote much of the code or the work was a team effort, scope authorship truthfully rather than claiming sole credit.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "fit-level",
+   "kind": "fit",
+   "check": null,
+   "severity": "none",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Separate resume defects, fixable by editing, from role-fit gaps that editing cannot fix.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Diagnose tenure shortfalls honestly, never suggest stretching dates, and say when an otherwise clean higher-level sheet is still worth sending to win down-level or external routing.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "fit-tenure",
+   "kind": "fit",
+   "check": null,
+   "severity": "none",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "For mid-level targets, a long paid-role gap bridged only by personal projects is a role-fit warning.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 18,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "major (role-fit warning)"
+     }
+    },
+    {
+     "text": "Total contiguous paid tenure against the target band is a structural limit that editing cannot fix.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "non-engineering-bullet",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Bullets should describe engineering work and its results, not meeting rituals, pull-request counts or non-code admin tasks.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Replace process claims and non-code admin items with the actual engineering shipped: code, interfaces, failure handling, tests.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A bullet about non-code escalation wastes space in a software role; replace it with engineering contribution.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "self-directed-as-job",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "major",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Listing personal scripts and self-directed work as a job in Experience reads as gap-filling and crowds out real paid work.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "Move self-directed work out of Experience into Projects, keeping only items that are public and verifiable, with live links.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A multi-year self-directed entry in Experience built from personal scripts looks like gap padding.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "metric-conservatism",
+   "kind": "fuzzy",
+   "check": null,
+   "severity": "nit",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "A time-saved figure that is implausible on its face damages trust in every other number; use a figure you can defend strictly.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 6,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "One implausible number makes the reader discount every other metric on the page.",
+     "version": 2,
+     "after_audits": false,
+     "absorbed_seq": 12,
+     "source": "reviewer v2",
+     "params": null
+    },
+    {
+     "text": "A large time-saved figure invites probing; be ready to say whether it was active effort or elapsed wall-clock time.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 8,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Reframe time-saved claims around active effort removed or delivery time cut, so they survive probing.",
+     "version": 3,
+     "after_audits": false,
+     "absorbed_seq": 2,
+     "source": "reviewer v3",
+     "params": null
+    },
+    {
+     "text": "Do not hedge a truthful strong number to prepare for deep interviews; restore punchy, truthful metrics.",
+     "version": 5,
+     "after_audits": true,
+     "absorbed_seq": 15,
+     "source": "reviewer v5 (after the audits)",
+     "params": {
+      "reverses": "earlier advice to make claims more conservative"
+     }
+    },
+    {
+     "text": "Do not hedge or dull strong, factual numbers because an interviewer might probe them later; prepare the defense after the invite.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Keep a truthful phrase punchy if it wins the scan and can be honestly defended.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  },
+  {
+   "id": "weak-evidence-warning",
+   "kind": "fit",
+   "check": null,
+   "severity": "none",
+   "allows_lock": false,
+   "params": null,
+   "rulings": [
+    {
+     "text": "Never put fabricated figures, broken projects or zero-code repositories on any sheet.",
+     "version": 5,
+     "after_audits": true,
+     "absorbed_seq": 15,
+     "source": "reviewer v5 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A broken prototype must not take page space that shipped recent work needs.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "A very old hackathon with no surviving code or detail is not evidence for a skill.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Using a runtime or writing style docs in a language is not engineering in that language.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "With only weak evidence, make no resume edit; report a role-fit warning instead.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": {
+      "severity": "none",
+      "output": "structural role-fit warning"
+     }
+    },
+    {
+     "text": "Route a missing skill backed only by invalid evidence to a separate role-fit warning, never a resume-edit severity, so nobody stuffs broken or stale projects.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 17,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    },
+    {
+     "text": "Leave out broken prototypes, empty or doc-only repos and projects whose claims fail inspection.",
+     "version": 14,
+     "after_audits": true,
+     "absorbed_seq": 19,
+     "source": "reviewer v14 (after the audits)",
+     "params": null
+    }
+   ]
+  }
+ ]
+}
