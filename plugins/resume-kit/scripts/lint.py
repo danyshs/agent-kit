@@ -674,12 +674,15 @@ def rule_params(rule: rules.Rule) -> dict[str, Any]:
     return out
 
 
-def run_checks(ctx: Ctx, table: dict[str, rules.Rule]) -> list[Finding]:
+def run_checks(ctx: Ctx, table: dict[str, rules.Rule]) -> tuple[list[Finding], int]:
+    """The findings and how many checks ran; zero checks ran is bad input, never a pass."""
     found: list[Finding] = []
+    ran = 0
     for rid, fn in CHECKS.items():
         rule = table.get(rid)
         if rule is None or rule.active() is None:
             continue  # removed in flexible mode, or not in this ledger
+        ran += 1
         got = [
             f for f in fn(ctx, rule_params(rule), rule.active_severity()) if f.severity != "none"
         ]
@@ -689,7 +692,10 @@ def run_checks(ctx: Ctx, table: dict[str, rules.Rule]) -> list[Finding]:
             )
         print(f"  {rid}: {len(got)}")
         found += got
-    return found
+    if ran == 0:
+        raise InputError(f"0 of {len(CHECKS)} checks ran: the rules ledger has none of them active")
+    print(f"lint: {ran} of {len(CHECKS)} checks ran")
+    return found, ran
 
 
 def today() -> YM:
@@ -773,8 +779,8 @@ def run(resume_json: Path, pdf_path: Path, settings_path: Path, out: Path) -> in
     print(f"lint: {len(ctx.pdf.lines)} pages, {n_bullets} bullets, {n_items} skills items")
     if n_bullets == 0:
         raise InputError(f"{resume_json}: 0 bullets parsed: nothing to check")
-    found = run_checks(ctx, table)
-    common.findings_out(out, found, {"paid_years": round(ctx.paid_years, 2)})
+    found, ran = run_checks(ctx, table)
+    common.findings_out(out, found, {"paid_years": round(ctx.paid_years, 2), "checks_ran": ran})
     print(f"lint: {len(found)} findings")
     return 1 if found else 0
 
@@ -1044,6 +1050,11 @@ def test_cap() -> None:
         raise AssertionError("cap not hit")
     except InputError as e:
         assert "hit" in str(e)
+    try:
+        run_checks(ctx_of(exp(entry("a", (2025, 1), None, ("Built X",)))), {})
+        raise AssertionError("0 checks ran and nothing failed")
+    except InputError as e:
+        assert "0 of" in str(e)
 
 
 def test_same_text() -> None:

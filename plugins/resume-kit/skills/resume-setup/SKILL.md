@@ -40,6 +40,8 @@ Write `K`:
 
 `build` is the friend's own build command if they have one, with `{tex}` where the file goes.
 
+In a git repo (`git rev-parse --git-dir` works), append `runs/` and `.resumekit/` to `<git dir>/info/exclude`, each only if that line isn't there yet. That file is never committed, so the friend's run files stay out of `git status` without a change to their `.gitignore`.
+
 ### 3. Markers
 
 The markers tell the scripts where each section, entry and bullet is. They change nothing on the page, and step 3.5 proves that.
