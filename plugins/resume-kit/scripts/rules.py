@@ -7,6 +7,7 @@
 Usage: rules.py --print [--settings <file>]     active rules, then every superseded ruling
        rules.py --check                         every sharp rule has a check and every check a rule
        rules.py --fuzzy [--settings <file>]     active fuzzy rules' text, for a scorer brief
+       rules.py --brief [--settings <file>]     every active rule, one line each, for a judge
        rules.py add|modify|remove <rule-id> --reason <text> [--text <t>] [--severity <s>]
                 [--kind sharp|fuzzy] --settings <file>    flexible mode only
        rules.py --self-test
@@ -172,6 +173,31 @@ def cmd_fuzzy(rules: dict[str, Rule]) -> int:
         act = rule.active()
         if rule.kind == "fuzzy" and act is not None:
             print(f"- {rule.id} ({rule.active_severity()}): {act.text}")
+    return 0
+
+
+def brief_text(rules: dict[str, Rule], chars_max: int = common.RULES_BRIEF_CHARS_MAX) -> str:
+    """Every active rule on one line, worst severity first: a judge's whole rulebook in one
+    read. The full ledger is too long to read whole, and a judge that sees half the rules
+    judges by the half it saw."""
+    order = {"blocker": 0, "major": 1, "nit": 2, "none": 3}  # none: fit rules, describe only
+    lines: list[tuple[int, str]] = []
+    for rule in rules.values():
+        act = rule.active()
+        if act is None:
+            continue
+        sev = rule.active_severity()
+        assert sev in order, f"{rule.id}: severity {sev!r}"
+        lines.append((order[sev], f"- {rule.id} ({rule.kind}, {sev}): {act.text}"))
+    assert lines, "no active rules"
+    text = "\n".join(line for _, line in sorted(lines)) + "\n"
+    if len(text) > chars_max:
+        raise InputError(f"rules brief is {len(text)} characters: RULES_BRIEF_CHARS_MAX hit")
+    return text
+
+
+def cmd_brief(rules: dict[str, Rule]) -> int:
+    print(brief_text(rules), end="")
     return 0
 
 
@@ -361,11 +387,32 @@ def test_gaps() -> None:
     ]
 
 
+def test_brief() -> None:
+    """One line per active rule, worst first; the shipped ledger fits; over the cap is bad input."""
+    rules = {r["id"]: rule_from(r, "t") for r in sample()["rules"]}
+    text = brief_text(rules)
+    assert text.splitlines() == [
+        "- duty-filler (fuzzy, major): no duties",
+        "- spill (sharp, major): rulebook",
+    ], text
+    shipped = load()
+    full = brief_text(shipped)
+    active = [r for r in shipped.values() if r.active() is not None]
+    assert len(full.splitlines()) == len(active) and len(active) > 0, len(active)
+    assert full.index("(sharp, blocker)") < full.index("(sharp, major)"), "not worst first"
+    try:
+        brief_text(rules, chars_max=10)
+        raise AssertionError("a brief over its cap passed")
+    except InputError as e:
+        assert "RULES_BRIEF_CHARS_MAX" in str(e)
+
+
 def self_test() -> int:
-    for t in (test_order, test_local, test_gaps):
+    tests = (test_order, test_local, test_gaps, test_brief)
+    for t in tests:
         t()
         print(f"ok {t.__name__}")
-    print("self-test passed (3 tests)")
+    print(f"self-test passed ({len(tests)} tests)")
     return 0
 
 
@@ -391,11 +438,16 @@ def main(argv: list[str]) -> int:
             if "settings" not in opts:
                 raise InputError("--settings is required")
             return cmd_edit(argv[0], argv[1], opts, Path(opts["settings"]))
-        if argv and argv[0] in ("--print", "--check", "--fuzzy"):
+        if argv and argv[0] in ("--print", "--check", "--fuzzy", "--brief"):
             opts = parse_opts(argv[1:])
             local, _ = settings_local(Path(opts["settings"]) if "settings" in opts else None)
             rules = load(Path(opts.get("rules", str(SHIPPED))), local)
-            cmd = {"--print": cmd_print, "--check": cmd_check, "--fuzzy": cmd_fuzzy}[argv[0]]
+            cmd = {
+                "--print": cmd_print,
+                "--check": cmd_check,
+                "--fuzzy": cmd_fuzzy,
+                "--brief": cmd_brief,
+            }[argv[0]]
             return cmd(rules)
         print(__doc__, file=sys.stderr)
         return 2

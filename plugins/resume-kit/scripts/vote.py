@@ -7,7 +7,8 @@
 Usage: vote.py tally --keep N --resume <resume.json> [--locks <locks.json>] --out <file>
                      <run.json>...
        vote.py judge-prep <old.json> <new.json> <old.pdf> <new.pdf> --seed N --out <dir>
-       vote.py paired <verdict.json>...      each next to the map.json judge-prep wrote
+                          --posting <posting.txt> --rules <rules brief>
+       vote.py paired <verdict.json>...      each in a judge-prep folder, its map beside it
        vote.py --self-test
 tally keeps a finding raised by at least N runs, keyed by (rule ID, location ID); its severity
 comes from the active rule, never the scorer. Exit 0 ok, 2 bad input or invalid agent output.
@@ -150,10 +151,30 @@ def plain_text(r: rp.Resume) -> str:
     return "\n".join(out)
 
 
-def judge_prep(old: Path, new: Path, old_pdf: Path, new_pdf: Path, seed: int, out: Path) -> str:
-    """Old and new go to A and B at random, recorded, so a side preference can't pass as a win."""
+JUDGE_FILES = ("A.txt", "B.txt", "A.pdf", "B.pdf", "posting.txt", "rules.txt")
+
+
+def map_path(judge_dir: Path) -> Path:
+    return judge_dir.parent / f"{judge_dir.name}.map.json"
+
+
+def judge_prep(
+    old: Path,
+    new: Path,
+    old_pdf: Path,
+    new_pdf: Path,
+    seed: int,
+    out: Path,
+    extra: tuple[Path, Path],
+) -> str:
+    """Old and new go to A and B at random, recorded, so a side preference can't pass as a win.
+    The folder must be new: a judge reads only its own folder, never an earlier verdict. The
+    map sits beside the folder, not in it, so the judge can't learn which side is new."""
+    posting, rules_brief = extra
     for p in (old_pdf, new_pdf):
         common.check_pdf_size(p)
+    if out.exists() and any(out.iterdir()):
+        raise InputError(f"{out} is not empty: each judge run needs a new folder")
     sides = ["old", "new"]
     random.Random(seed).shuffle(sides)
     files = {"old": (rp.load_resume(old), old_pdf), "new": (rp.load_resume(new), new_pdf)}
@@ -162,7 +183,12 @@ def judge_prep(old: Path, new: Path, old_pdf: Path, new_pdf: Path, seed: int, ou
         r, pdf = files[side]
         (out / f"{label}.txt").write_text(plain_text(r), encoding="utf-8")
         shutil.copyfile(pdf, out / f"{label}.pdf")
-    common.write_json(out / "map.json", {"A": sides[0], "B": sides[1], "seed": seed})
+    for src, name in ((posting, "posting.txt"), (rules_brief, "rules.txt")):
+        if not src.is_file():
+            raise InputError(f"{src}: no such file")
+        shutil.copyfile(src, out / name)
+    common.write_json(map_path(out), {"A": sides[0], "B": sides[1], "seed": seed})
+    assert all((out / f).is_file() for f in JUDGE_FILES), "judge folder incomplete"
     return sides[0]
 
 
@@ -174,14 +200,16 @@ def paired(paths: list[Path]) -> str:
             f" got {len(paths)}"
         )
     if len({p.resolve().parent for p in paths}) != len(paths):
-        raise InputError("each verdict needs its own folder with its own map.json")
+        raise InputError("each verdict needs its own judge-prep folder and map")
     wins_new = 0
     for p in paths:
-        side = common.read_json(p.parent / "map.json")
-        prefers = load_run(p, "judge")["prefers"]
+        side = common.read_json(map_path(p.parent))
+        run = load_run(p, "judge")
+        prefers = run["prefers"]
         if side.get(prefers) not in ("old", "new"):
-            raise InputError(f"{p.parent / 'map.json'}: no side for {prefers}")
-        wins_new += side[prefers] == "new"
+            raise InputError(f"{map_path(p.parent)}: no side for {prefers}")
+        # a tie is no vote for the change: picking a side on no difference is a coin flip
+        wins_new += side[prefers] == "new" and not run["tie"]
     if len(paths) == common.PAIRED_RUNS_FIRST:
         return "drop" if wins_new <= common.PAIRED_DROP_AT_MOST else "more"
     return "keep" if wins_new >= common.PAIRED_KEEP_AT_LEAST else "reject"
@@ -272,33 +300,50 @@ def test_tally() -> None:
         pass
 
 
+def verdicts(d: Path, name: str, picks: list[tuple[str, bool]]) -> list[Path]:
+    """One folder per verdict, new always on A, so a pick of A is a vote for new."""
+    paths: list[Path] = []
+    for i, (prefers, tie) in enumerate(picks):
+        run = d / f"{name}-{i}"
+        run.mkdir()
+        common.write_json(map_path(run), {"A": "new", "B": "old", "seed": i})
+        common.write_json(run / "verdict.json", {"prefers": prefers, "tie": tie, "why": "w"})
+        paths.append(run / "verdict.json")
+    return paths
+
+
 def test_paired_and_prep() -> None:
-    """The drop, more, keep and reject boundaries; the A/B map is random but repeatable."""
+    """The drop, more, keep and reject boundaries; ties never vote for the change; the A/B
+    map is random but repeatable; a judge folder holds its six files and must start empty."""
     with tempfile.TemporaryDirectory() as tmp:
         d = Path(tmp)
         common.write_json(d / "r.json", sample_resume())
         (d / "r.pdf").write_bytes(b"%PDF-1.4 stub")
-        firsts = {
-            judge_prep(d / "r.json", d / "r.json", d / "r.pdf", d / "r.pdf", s, d / f"p{s}")
-            for s in range(8)
-        }
+        (d / "post.txt").write_text("posting", encoding="utf-8")
+        (d / "brief.txt").write_text("- rule", encoding="utf-8")
+        extra = (d / "post.txt", d / "brief.txt")
+
+        def prep(seed: int, out: Path) -> str:
+            return judge_prep(
+                d / "r.json", d / "r.json", d / "r.pdf", d / "r.pdf", seed, out, extra
+            )
+
+        firsts = {prep(s, d / f"p{s}") for s in range(8)}
         assert firsts == {"old", "new"}, firsts
-        assert (
-            judge_prep(d / "r.json", d / "r.json", d / "r.pdf", d / "r.pdf", 3, d / "again")
-            == common.read_json(d / "p3" / "map.json")["A"]
-        )
+        assert prep(3, d / "again") == common.read_json(map_path(d / "p3"))["A"]
         assert "acme-b1" not in (d / "p0" / "A.txt").read_text(encoding="utf-8")
+        assert sorted(f.name for f in (d / "p0").iterdir()) == sorted(JUDGE_FILES), "map in reach"
+        try:
+            prep(0, d / "p0")
+            raise AssertionError("judge-prep reused a folder")
+        except InputError:
+            pass
         for n, wins, want in ((5, 2, "drop"), (5, 3, "more"), (10, 8, "keep"), (10, 7, "reject")):
-            paths: list[Path] = []
-            for i in range(n):
-                run = d / f"v{n}-{wins}-{i}"
-                run.mkdir()
-                common.write_json(run / "map.json", {"A": "new", "B": "old", "seed": i})
-                common.write_json(
-                    run / "verdict.json", {"prefers": "A" if i < wins else "B", "why": "w"}
-                )
-                paths.append(run / "verdict.json")
-            assert paired(paths) == want, (n, wins, paired(paths))
+            picks = [("A" if i < wins else "B", False) for i in range(n)]
+            assert paired(verdicts(d, f"v{n}-{wins}", picks)) == want, (n, wins)
+        tied = [("A", i < 3) for i in range(10)]  # 10 picks of new, 3 ties: 7 real votes
+        assert paired(verdicts(d, "tie10", tied)) == "reject"
+        assert paired(verdicts(d, "tie5", [("A", True)] * 5)) == "drop"
 
 
 def test_schema() -> None:
@@ -311,6 +356,10 @@ def test_schema() -> None:
     del bad["fit"]
     errs = common.schema_errors(bad, schema)
     assert len(errs) == 3, errs
+    judge = common.read_json(SCHEMAS / "judge.json")
+    assert common.schema_errors({"prefers": "A", "tie": False, "why": "w"}, judge) == []
+    assert len(common.schema_errors({"prefers": "A", "why": "w"}, judge)) == 1  # tie is required
+    assert len(common.schema_errors({"prefers": "A", "tie": 1, "why": "w"}, judge)) == 1
 
 
 def self_test() -> int:
@@ -335,10 +384,13 @@ def main(argv: list[str]) -> int:
         if cmd == "judge-prep":
             seed = int(need(opt(rest, "--seed"), "--seed"))
             out = Path(need(opt(rest, "--out"), "--out"))
+            posting = Path(need(opt(rest, "--posting"), "--posting"))
+            brief = Path(need(opt(rest, "--rules"), "--rules"))
             if len(rest) != 4:
                 raise InputError("judge-prep needs <old.json> <new.json> <old.pdf> <new.pdf>")
-            judge_prep(*(Path(a) for a in rest), seed=seed, out=out)
-            print(f"judge-prep: A.txt, B.txt, A.pdf, B.pdf and map.json in {out}")
+            old, new, old_pdf, new_pdf = (Path(a) for a in rest)
+            judge_prep(old, new, old_pdf, new_pdf, seed, out, (posting, brief))
+            print(f"judge-prep: {', '.join(JUDGE_FILES)} in {out}; the map in {map_path(out)}")
             return 0
         if cmd == "paired":
             print(paired([Path(a) for a in rest]))

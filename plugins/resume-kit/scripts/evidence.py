@@ -9,6 +9,7 @@ Usage: evidence.py lint <file> [--hook]     yamllint and the schema, as <file>:<
        evidence.py todo <file>              draft facts and their open questions
        evidence.py check <resume.json> <evidence> <pdf> --out <findings.json>
        evidence.py delete <fact-id> <file>  remove one fact on purpose
+       evidence.py public <file> --out <f>  confirmed, non-confidential facts only, for agent briefs
        evidence.py --self-test
 A fact is a fenced block that opens with three backticks and "fact" and holds StrictYAML.
 Exit 0 ok, 1 findings or problems, 2 bad input, 3 missing package.
@@ -526,6 +527,38 @@ def cmd_delete(fact_id: str, evidence: Path) -> int:
     return 0
 
 
+def public_text(md: str, facts: list[Fact]) -> str:
+    """Only the confirmed, non-confidential fact blocks, with no prose around them: an agent
+    brief can't leak what the friend marked private, even from a note between facts."""
+    lines = md.split("\n")
+    keep = [f for f in facts if not f.confidential and f.status == "confirmed"]
+    blocks: list[str] = []
+    for f in keep:
+        start = f.line - 1
+        end = next(i for i in range(start + 1, len(lines)) if lines[i].strip() == FENCE_CLOSE)
+        blocks.append("\n".join(lines[start : end + 1]))
+    out = "\n\n".join(blocks) + "\n"
+    found = common.search_text(out)
+    for f in (f for f in facts if f.confidential):
+        for t in f.terms:
+            needle = common.search_text(t).split(" \x00 ")[0]
+            if re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", found):
+                raise InputError(f"a public fact names {t!r}, a private term of fact {f.id}")
+    again, problems = facts_of(out)
+    assert not problems and [g.id for g in again] == [f.id for f in keep], "public copy changed"
+    return out
+
+
+def cmd_public(evidence: Path, out: Path) -> int:
+    facts, problems = load_facts(evidence)
+    if problems:
+        raise InputError(f"{evidence}: {len(problems)} problems; run: evidence.py lint {evidence}")
+    text = public_text(read_evidence(evidence), facts)
+    out.write_text(text, encoding="utf-8")
+    print(f"public: {text.count(FENCE_CLOSE)} facts to {out}")
+    return 0
+
+
 def cmd_hook() -> int:
     """PostToolUse: lint an edited file holding fact blocks; exit 2 shows the agent its problems."""
     try:
@@ -638,6 +671,32 @@ def test_private() -> None:
         assert len(got) == hits, (page, got)
 
 
+def test_public() -> None:
+    """The agent copy keeps confirmed public facts only, drops prose between blocks, and refuses
+    a public fact that names a private term."""
+    private = fact_block("p1", "acme", "Client work.", extra="terms:\n  - Zafiro\n").replace(
+        "confidential: no", "confidential: yes"
+    )
+    md = (
+        "# notes: Zafiro pays well\n\n"
+        + fact_block("a1", "acme", "Cut build time 40%.")
+        + "\nprose\n"
+        + fact_block("a2", "acme", "Draft idea.", status="draft")
+        + private
+    )
+    facts, problems = facts_of(md)
+    assert not problems, problems
+    out = public_text(md, facts)
+    assert "a1" in out and "a2" not in out and "p1" not in out, out
+    assert "notes" not in out and "prose" not in out and "zafiro" not in out.lower(), out
+    leak = md.replace("Cut build time 40%.", "Cut Zafiro build time 40%.")
+    try:
+        public_text(leak, facts_of(leak)[0])
+        raise AssertionError("a public fact naming a private term passed")
+    except InputError:
+        pass
+
+
 def test_merge() -> None:
     """A thin evidence file must report every unbacked claim in one finding, not hit the cap."""
     nums = " ".join(f"{i + 1}0 items" for i in range(30))
@@ -685,7 +744,7 @@ def test_gate() -> None:
 
 
 def self_test() -> int:
-    tests = (test_format, test_numbers, test_gate, test_merge, test_private)
+    tests = (test_format, test_numbers, test_gate, test_merge, test_private, test_public)
     for t in tests:
         t()
         print(f"ok {t.__name__}")
@@ -707,6 +766,8 @@ def main(argv: list[str]) -> int:
         }
         if argv and (argv[0], len(argv)) in cmds:
             return cmds[(argv[0], len(argv))]()
+        if len(argv) == 4 and argv[0] == "public" and argv[2] == "--out":
+            return cmd_public(Path(argv[1]), Path(argv[3]))
         if len(argv) == 6 and argv[0] == "check" and argv[4] == "--out":
             return cmd_check(Path(argv[1]), Path(argv[2]), Path(argv[3]), Path(argv[5]))
         print(__doc__, file=sys.stderr)

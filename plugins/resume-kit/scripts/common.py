@@ -28,6 +28,7 @@ EXPRESS_EDITS_MAX = 6
 EXPRESS_PASSES_MAX = 3
 FINDINGS_PER_CHECK_MAX = 20
 CHECKS_MAX = 40
+RULES_BRIEF_CHARS_MAX = 16000  # a judge reads it in one Read call (cut near 30k characters)
 AGENT_RUNS_MAX = 230  # 75 loop + 3 Express passes of 50, rounded up
 BUILD_TIMEOUT_S = 120
 LINT_TIMEOUT_S = 30
@@ -182,6 +183,8 @@ def schema_errors(obj: Any, schema: dict[str, Any], where: str = "$", depth: int
             return [f"{where}: expected a string"]
         n = schema.get("maxLength")
         return [f"{where}: longer than {n} characters"] if n is not None and len(obj) > n else []
+    if kind == "boolean":
+        return [] if isinstance(obj, bool) else [f"{where}: expected true or false"]
     if kind == "array":
         return array_errors(obj, schema, where, depth)
     if kind == "object":

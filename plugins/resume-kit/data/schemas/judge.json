@@ -2,6 +2,7 @@
   "type": "object",
   "required": [
     "prefers",
+    "tie",
     "why"
   ],
   "additionalProperties": false,
@@ -15,6 +16,9 @@
     "why": {
       "type": "string",
       "maxLength": 1500
+    },
+    "tie": {
+      "type": "boolean"
     }
   }
 }
