@@ -18,29 +18,29 @@ The main reasons to use the kit. Each changes how Claude plans, debugs, codes or
 
 ### Evidence and research
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| ★ `single-evidence-ledger` | Keeps what Claude knows trustworthy across sessions: every fact has one home, notes say when they were last checked, and long research or debugging keeps a `FACTS.md` where a guess can't pass as a fact until a test settles it. | Your work spans many sessions, or Claude acts on stale notes or unproven guesses. | |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| ★ `single-evidence-ledger` | Keeps what Claude knows trustworthy across sessions: every fact has one home, notes say when they were last checked, and long research or debugging keeps a `FACTS.md` where a guess can't pass as a fact until a test settles it. | Your work spans many sessions, or Claude acts on stale notes or unproven guesses. | | `claude plugin install single-evidence-ledger@agent-kit` |
 
 ### Resume work
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. `/resume-setup` gets you started. | You're job hunting with a LaTeX resume. | python3 or uv; a LaTeX build |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. `/resume-setup` gets you started. | You're job hunting with a LaTeX resume. | python3 or uv; a LaTeX build | `claude plugin install resume-kit@agent-kit` |
 
 ### Planning and review
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| ★ `egm-helper` | Spots when a task needs a design doc before any code, then runs it through Google's EGM review: fresh reviewers who see only the doc. | Claude keeps building the wrong thing, or you want to sign off before it starts. | `egm` (installed below) |
-| ★ `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another checks the fixes didn't go too far. You get one table to decide from. | You approve plans and want the weak spots shown first. | |
-| `rhino-owl` | Runs up to four throwaway prototypes, each with a dollar cap you approve, to answer a question reading can't. Keeps the findings, throws the code away. | You hit questions where the docs are thin or contradict each other. | `guards` |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| ★ `egm-helper` | Spots when a task needs a design doc before any code, then runs it through Google's EGM review: fresh reviewers who see only the doc. | Claude keeps building the wrong thing, or you want to sign off before it starts. | `egm` (installed below) | `claude plugin install egm-helper@agent-kit` |
+| ★ `antagonist-protagonist` | Before you approve a plan, one reviewer argues against it and another checks the fixes didn't go too far. You get one table to decide from. | You approve plans and want the weak spots shown first. | | `claude plugin install antagonist-protagonist@agent-kit` |
+| `rhino-owl` | Runs up to four throwaway prototypes, each with a dollar cap you approve, to answer a question reading can't. Keeps the findings, throws the code away. | You hit questions where the docs are thin or contradict each other. | `guards` | `claude plugin install rhino-owl@agent-kit` |
 
 ### Coding
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| ★ `tiger-style-core` | TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. Loads when you ask ("review this with tiger style"). | You want stricter, safer code or a hard code review. | |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| ★ `tiger-style-core` | TigerBeetle's TigerStyle: safety first, a limit on everything, lots of assertions. Loads when you ask ("review this with tiger style"). | You want stricter, safer code or a hard code review. | | `claude plugin install tiger-style-core@agent-kit` |
 
 ## Support plugins
 
@@ -48,45 +48,47 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 
 ### Coding add-ons
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. | You use `tiger-style-core`. Take the languages you write. | `tiger-style-core` |
-| `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. | You use `tiger-style-core`. Take the languages you write. | `tiger-style-core` | `claude plugin install tiger-style-python@agent-kit` (swap in your language) |
+| `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | | `claude plugin install code-voice@agent-kit` |
 
 ### Lessons from working with Claude
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | You debug with Claude at all. | |
-| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | Claude asks you too much, or says "done" too early. | |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | You debug with Claude at all. | | `claude plugin install debugging-discipline@agent-kit` |
+| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | Claude asks you too much, or says "done" too early. | | `claude plugin install when-to-ask@agent-kit` |
 
 ### Sub-agents and cost
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `agent-orchestration` | When Claude should use sub-agents and when not, and how to keep context small. | Claude spawns sub-agents for everything, or never. | |
-| `guards` | Spending limits on sub-agents, a model price ceiling and a per-turn token cap. | You pay per token and want hard limits. | python3 |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `agent-orchestration` | When Claude should use sub-agents and when not, and how to keep context small. | Claude spawns sub-agents for everything, or never. | | `claude plugin install agent-orchestration@agent-kit` |
+| `guards` | Spending limits on sub-agents, a model price ceiling and a per-turn token cap. | You pay per token and want hard limits. | python3 | `claude plugin install guards@agent-kit` |
 
 ### Comfort
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 |
-| `turn-sound` | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime; silent on Linux) |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 | `claude plugin install attention-levels@agent-kit` |
+| `turn-sound` | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime; silent on Linux) | `claude plugin install turn-sound@agent-kit` |
 
 ### Git and GitHub
 
-| Plugin | What it does | Pick it if | Needs |
-|---|---|---|---|
-| `pre-push` | Before a branch's first push (not main), asks you to confirm a review ran. It takes your word for it. | You want a review before anything leaves your machine. | git, `tiger-style-core`; [manual step](SETUP.md#pre-push) |
-| `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | You contribute to other people's projects through forks. | |
+| Plugin | What it does | Pick it if | Needs | Install |
+|---|---|---|---|---|
+| `pre-push` | Before a branch's first push (not main), asks you to confirm a review ran. It takes your word for it. | You want a review before anything leaves your machine. | git, `tiger-style-core`; [manual step](SETUP.md#pre-push) | `claude plugin install pre-push@agent-kit` |
+| `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | You contribute to other people's projects through forks. | | `claude plugin install fork-pr-check@agent-kit` |
 
 ## Install
 
-You need [Claude Code](https://code.claude.com/docs/en/setup): `claude --version` should print a version number. Add the kit, then install what you picked. For the Starter pack, paste these four lines, one at a time:
+You need [Claude Code](https://code.claude.com/docs/en/setup): `claude --version` should print a version number. Add the kit, then install what you picked. For the Starter pack, paste these commands, one at a time:
 
 ```
 claude plugin marketplace add danyshs/agent-kit
+# Starter pack only: single-evidence-ledger, egm-helper, antagonist-protagonist, tiger-style-core.
+# Not everything. Any other plugin: claude plugin install <name>@agent-kit (see the tables above).
 claude plugin install starter@agent-kit
 claude plugin marketplace add google/elephant-goldfish-model
 claude plugin install egm@egm
