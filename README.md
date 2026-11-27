@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/header.svg" width="900" alt="agent-kit: small plugins that make Claude Code plan first, debug by evidence, and write safer code"></p>
+<p align="center"><img src="assets/header.svg" width="900" alt="agent-kit: small plugins that make Claude Code plan first, work from evidence, and write safer code"></p>
 
 <p align="center"><a href="#flagship-plugins">Plugins</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="REFERENCE.md">Reference</a></p>
 
