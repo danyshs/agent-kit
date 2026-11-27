@@ -53,26 +53,26 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 | `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. | You use `tiger-style-core`. Take the languages you write. | `tiger-style-core` |
 | `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | |
 
-### Debugging
+### Lessons from working with Claude
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
 | `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | You debug with Claude at all. | |
+| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | Claude asks you too much, or says "done" too early. | |
 
-### Cost control
+### Sub-agents and cost
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
+| `agent-orchestration` | When Claude should use sub-agents and when not, and how to keep context small. | Claude spawns sub-agents for everything, or never. | |
 | `guards` | Spending limits on sub-agents, a model price ceiling and a per-turn token cap. | You pay per token and want hard limits. | python3 |
 
-### Working with Claude
+### Comfort
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
-| `when-to-ask` | Claude does safe, undoable work without asking, and runs every check once before saying "done". | Claude asks you too much, or says "done" too early. | |
 | `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 |
 | `turn-sound` | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime) |
-| `agent-orchestration` | When Claude should use sub-agents and when not, and how to keep context small. | Claude spawns sub-agents for everything, or never. | |
 
 ### Git and GitHub
 
