@@ -57,7 +57,7 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
-| ★ `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | You debug with Claude at all. | |
+| `debugging-discipline` | Seven debugging rules, each from a real mistake. Example: exit code 0 doesn't prove a check passed. | You debug with Claude at all. | |
 
 ### Cost control
 
