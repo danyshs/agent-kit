@@ -1,14 +1,13 @@
 {
   "name": "starter",
-  "version": "0.1.0",
-  "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist, egm-helper and single-evidence-ledger.",
+  "version": "0.2.0",
+  "description": "Installs the Starter pack in one go: tiger-style-core, antagonist-protagonist, egm-helper and single-evidence-ledger.",
   "author": {
     "name": "danyshs"
   },
   "license": "Apache-2.0",
   "dependencies": [
     "tiger-style-core",
-    "debugging-discipline",
     "antagonist-protagonist",
     "egm-helper",
     "single-evidence-ledger"

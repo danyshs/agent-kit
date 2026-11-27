@@ -11,7 +11,7 @@
     {
       "name": "starter",
       "source": "./plugins/starter",
-      "description": "Installs the Starter pack in one go: tiger-style-core, debugging-discipline, antagonist-protagonist, egm-helper and single-evidence-ledger.",
+      "description": "Installs the Starter pack in one go: tiger-style-core, antagonist-protagonist, egm-helper and single-evidence-ledger.",
       "category": "starter"
     },
     {
