@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v python3 >/dev/null 2>&1 || exit 0; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" agent; s=$?; [ $s -eq 0 ] || exit 2",
+            "command": "command -v python3 >/dev/null 2>&1 || { echo \"guard: refused: python3 not on PATH; fix: install python3 or disable the guards plugin\" >&2; exit 2; }; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" agent; s=$?; [ $s -eq 0 ] || exit 2",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v python3 >/dev/null 2>&1 || exit 0; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" turn; s=$?; [ $s -eq 0 ] || exit 2",
+            "command": "command -v python3 >/dev/null 2>&1 || { echo \"guard: python3 not on PATH, turn checks are off\" >&2; exit 0; }; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.py\" turn; s=$?; [ $s -eq 0 ] || exit 2",
             "timeout": 5
           }
         ]

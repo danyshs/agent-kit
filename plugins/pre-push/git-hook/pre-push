@@ -17,9 +17,22 @@ set -e
 # whole-diff defects. Fires only on the FIRST push of a branch (no upstream yet) and never
 # on main/master, so re-pushes of fix-ups stay quiet. Set REVIEW_DONE=1 to acknowledge
 # non-interactively; bypass entirely via git push --no-verify.
-branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-if [ "$branch" != "main" ] && [ "$branch" != "master" ] && [ -n "$branch" ] \
-	&& ! git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+# judge the refs being pushed, not the checked-out branch: `git push origin feature` from main
+# must still hit the gate. git feeds the ref list once, so keep it for the checks below too.
+refs=$(cat)
+# prints the new non-main branches in the ref list on stdin, space separated
+new_branches_in() {
+	while read -r _local_ref local_sha remote_ref remote_sha; do
+		[ -n "$remote_ref" ] || continue
+		case "$local_sha" in *[!0]*) ;; *) continue ;; esac # all zeros: a delete, nothing to review
+		case "$remote_sha" in *[!0]*) continue ;; esac      # the remote already has this branch
+		case "$remote_ref" in refs/heads/main | refs/heads/master) continue ;; esac
+		printf '%s ' "${remote_ref#refs/heads/}"
+	done
+}
+new_branches=$(printf '%s\n' "$refs" | new_branches_in)
+if [ -n "$new_branches" ]; then
+	branch=${new_branches% }
 	echo "pre-push: first push of '$branch'."
 	echo "          Has tiger-style REVIEW MODE run against this diff?"
 	echo "          Run it and clear every P0 before opening a PR — reference/author mode does not count."
@@ -41,8 +54,7 @@ fi
 
 # --- Personal add-on checks ---------------------------------------------------
 # Every executable in pre-push.d/ next to this hook runs with the same stdin and arguments.
-# git feeds the ref list once, so keep it to hand for each check and the repo-local hook.
-refs=$(cat)
+# they get the same ref list, read once at the top.
 addon_dir=$(dirname "$0")/pre-push.d
 if [ -d "$addon_dir" ]; then
 	for check in "$addon_dir"/*; do

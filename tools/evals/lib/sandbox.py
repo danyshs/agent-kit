@@ -59,23 +59,29 @@ class SandboxResult:
     stderr_text: str
 
 
+def _require(ok: bool, why: str) -> None:
+    """An assert that survives python -O: these checks hold the sandbox shut."""
+    if not ok:
+        raise ValueError(why)
+
+
 def _quote(path: Path) -> str:
     """A path as an SBPL string literal; paths with a quote or backslash are refused."""
     text = str(path)
-    assert text.startswith("/"), "profile paths are absolute"
-    assert '"' not in text and "\\" not in text, "no characters that need escaping in a profile"
+    _require(text.startswith("/"), "profile paths are absolute")
+    _require('"' not in text and "\\" not in text, "no characters that need escaping in a profile")
     return f'"{text}"'
 
 
 def build_profile(scratch: Path, home: Path) -> str:
     """SBPL: allow by default, no network, writes only under scratch, secret dirs unreadable.
     The last matching rule wins, so the allows sit after the denies."""
-    assert scratch.is_absolute() and home.is_absolute(), "paths are absolute"
+    _require(scratch.is_absolute() and home.is_absolute(), "paths are absolute")
     lines = ["(version 1)", "(allow default)", "(deny network*)", "(deny file-write*)"]
     lines.append(f'(allow file-write* (subpath {_quote(scratch)}) (literal "/dev/null"))')
     for name in DENY_READ_UNDER_HOME:
         lines.append(f"(deny file-read* (subpath {_quote(home / name)}))")
-    assert any(line.startswith("(deny network") for line in lines), "the network is denied"
+    _require(any(line.startswith("(deny network") for line in lines), "the network is denied")
     return "\n".join(lines) + "\n"
 
 
@@ -91,7 +97,7 @@ def _limit_resources() -> None:
 
 def scrubbed_env(scratch: Path) -> dict[str, str]:
     """No token, no inherited variable: only what an interpreter needs."""
-    assert scratch.is_absolute(), "scratch is absolute"
+    _require(scratch.is_absolute(), "scratch is absolute")
     tmp = scratch / "tmp"
     tmp.mkdir(exist_ok=True)
     env = {
@@ -102,7 +108,7 @@ def scrubbed_env(scratch: Path) -> dict[str, str]:
         "PYTHONDONTWRITEBYTECODE": "1",
         "PYTHONNOUSERSITE": "1",
     }
-    assert "KIRO_HOME" not in env and not any("TOKEN" in key for key in env), "no secrets"
+    _require("KIRO_HOME" not in env and not any("TOKEN" in key for key in env), "no secrets")
     return env
 
 
@@ -118,7 +124,7 @@ def run_sandboxed(argv: list[str], scratch: Path, timeout_s: float) -> SandboxRe
     """Run argv with cwd = scratch under the profile. Never raises on the child's behavior;
     a missing sandbox-exec raises FileNotFoundError, which callers prevent with check_sandbox."""
     assert argv and timeout_s > 0, "a command and a positive timeout"
-    assert scratch.is_absolute() and scratch.is_dir(), "scratch is an existing absolute dir"
+    _require(scratch.is_absolute() and scratch.is_dir(), "scratch is an existing absolute dir")
     real = scratch.resolve()
     profile = build_profile(real, Path.home().resolve())
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:

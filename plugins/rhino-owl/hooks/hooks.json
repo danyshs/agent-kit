@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sed \"s|@PLUGIN_ROOT@|$CLAUDE_PLUGIN_ROOT|g\" \"$CLAUDE_PLUGIN_ROOT/rules/rhino-owl.1.json\"",
+            "command": "python3 -c 'import json,os,sys; root = json.dumps(os.environ[\"CLAUDE_PLUGIN_ROOT\"])[1:-1]; sys.stdout.write(open(sys.argv[1], encoding=\"utf-8\").read().replace(\"@PLUGIN_ROOT@\", root))' \"$CLAUDE_PLUGIN_ROOT/rules/rhino-owl.1.json\"",
             "timeout": 5
           }
         ]

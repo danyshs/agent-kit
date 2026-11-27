@@ -11,6 +11,7 @@ Standard library only; runs on python 3.9.
 
 from __future__ import annotations
 
+import dataclasses
 import datetime
 import json
 import re
@@ -470,6 +471,7 @@ class Budget:
     off: bool
     since: datetime.datetime | None
     approved: bool = False  # from approved proposals, not a typed line
+    ignored: int = 0  # approved proposals newer than the typed line, which don't count
 
 
 def proposal_dollars(text: str) -> float | None:
@@ -560,7 +562,7 @@ def budget_line(main_path: Path) -> Budget:
         raise Refusal(f"refused: transcript empty: {main_path}; fix: restart the session")
     typed_budget, approvals = scan_budget(main_path, size_bytes)
     if typed_budget is not None:
-        return typed_budget
+        return dataclasses.replace(typed_budget, ignored=len(approvals))
     if not approvals:
         return Budget(None, False, None)
     newest, oldest = approvals[0], approvals[-1]
@@ -640,6 +642,11 @@ def run_agent(hook_input: Record) -> str:
     check_ceiling(model, launch.rates, prices)
     note = f"model {model}" + ("" if launch.priced else " (unpriced, family rates)")
     budget = budget_line(main_path)
+    if budget.ignored:  # say so, or the user thinks their "yes" raised the cap
+        note += (
+            f"; {budget.ignored} approved proposal(s) ignored: a typed budget line wins,"
+            " so type a new 'budget $N' to change it"
+        )
     if budget.off:
         return f"guard: budget off; {note}"
     if budget.dollars is None or budget.since is None:
@@ -650,7 +657,7 @@ def run_agent(hook_input: Record) -> str:
         raise Refusal(
             f"refused: spend ${spend.dollars:.2f} + launch floor ${floor:.2f} is over the budget;"
             f" spent ${spend.dollars:.2f} of ${budget.dollars:.2f}; fix: user types a higher"
-            f" 'budget $N' line"
+            f" 'budget $N' line; {note}"
         )
     return (
         f"guard: ${spend.dollars:.2f} of ${budget.dollars:.2f} since"

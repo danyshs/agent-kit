@@ -204,7 +204,7 @@ class ProfileTest(unittest.TestCase):
         self.assertLess(deny_at, allow_at, "the last matching rule wins, so the allow comes last")
 
     def test_profile_refuses_paths_that_need_escaping(self) -> None:
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             build_profile(Path('/tmp/a"b'), Path("/home/x"))
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             build_profile(Path("relative"), Path("/home/x"))

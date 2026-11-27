@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v python3 >/dev/null 2>&1 || exit 0; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/attention.py\"",
+            "command": "command -v python3 >/dev/null 2>&1 || { echo \"attention-levels: python3 not on PATH, level not read\" >&2; exit 0; }; python3 \"${CLAUDE_PLUGIN_ROOT}/scripts/attention.py\"",
             "timeout": 5
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sed \"s|@PLUGIN_ROOT@|$CLAUDE_PLUGIN_ROOT|g\" \"$CLAUDE_PLUGIN_ROOT/rules/attention-levels.1.json\"",
+            "command": "python3 -c 'import json,os,sys; root = json.dumps(os.environ[\"CLAUDE_PLUGIN_ROOT\"])[1:-1]; sys.stdout.write(open(sys.argv[1], encoding=\"utf-8\").read().replace(\"@PLUGIN_ROOT@\", root))' \"$CLAUDE_PLUGIN_ROOT/rules/attention-levels.1.json\"",
             "timeout": 5
           }
         ]

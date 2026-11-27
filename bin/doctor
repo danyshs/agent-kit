@@ -1,13 +1,22 @@
 #!/bin/sh
 # Checks the tools the kit needs and lists the agent-kit plugins installed.
+# Exits 1 when an installed plugin is missing a tool, so a script or CI step can't read a gap as a pass.
 ok() { printf '  ok      %s\n' "$1"; }
 miss() { printf '  missing %s (%s)\n' "$1" "$2"; }
 echo "agent-kit doctor"
 if command -v claude >/dev/null 2>&1; then ok "claude $(claude --version 2>/dev/null)"; else miss claude "install Claude Code first"; exit 1; fi
-for tool in python3:attention-levels,guards jq:turn-sound,status-line git:pre-push,status-line ffmpeg:turn-sound; do
+list=$(claude plugin list 2>/dev/null | grep '@agent-kit' | sed 's/^[^a-z]*//')
+# installed PLUGIN: true when PLUGIN@agent-kit is in the list
+installed() { printf '%s\n' "$list" | grep -q "^$1@agent-kit"; }
+failed=0
+for tool in python3:attention-levels,guards,rhino-owl jq:turn-sound,status-line git:pre-push,status-line ffmpeg:turn-sound uv:resume-kit latexmk:resume-kit; do
 	name=${tool%%:*}; used=${tool#*:}
-	if command -v "$name" >/dev/null 2>&1; then ok "$name"; else miss "$name" "needed by $used"; fi
+	if command -v "$name" >/dev/null 2>&1; then ok "$name"; continue; fi
+	needed=""
+	for plugin in $(printf '%s' "$used" | tr ',' ' '); do installed "$plugin" && needed="$needed $plugin"; done
+	if [ -n "$needed" ]; then miss "$name" "needed by installed:$needed"; failed=1
+	else miss "$name" "only for $used, not installed"; fi
 done
 echo "installed from agent-kit:"
-list=$(claude plugin list 2>/dev/null | grep '@agent-kit' | sed 's/^[^a-z]*//')
 if [ -n "$list" ]; then echo "$list" | sed 's/^/  /'; else echo "  none. Run: claude plugin install starter@agent-kit"; fi
+[ "$failed" -eq 0 ] || { echo "doctor: an installed plugin is missing a tool (above)"; exit 1; }

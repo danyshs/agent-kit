@@ -68,11 +68,11 @@ class ScopedToolsTest(unittest.TestCase):
     def test_glob_character_in_path_trips(self) -> None:
         odd = Path(self.tmp.name) / "a*b"
         odd.mkdir()
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             scoped_allowed_tools(("Read",), odd, self.home)
 
     def test_path_under_real_home_trips(self) -> None:
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             scoped_allowed_tools(("Read",), Path.home(), self.home)
 
 

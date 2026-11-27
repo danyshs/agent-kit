@@ -60,6 +60,7 @@ SANDBOX = {
 }
 ALLOWED_TOOLS = "Bash Read Write Edit Glob Grep WebFetch WebSearch"
 DENIED_TOOLS = "Agent Bash(sudo:*) Bash(git push:*) Bash(defaults write:*)"
+PUSH_FENCE_KEY = "url.rhino-no-push:.pushInsteadOf"  # an empty prefix matches every URL
 CAPPED_SUBTYPE = "error_max_budget_usd"  # what claude -p reports when the cap stops it
 
 
@@ -311,12 +312,34 @@ def claude_command(
     return command + [prompt]
 
 
+def push_fenced_env() -> dict[str, str]:
+    """The environment with every remote's push URL rewritten to a dead host. The deny list
+    matches `git push` by its prefix, so `git -C dir push` would slip past it; this doesn't."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_CONFIG_")}
+    env.update(GIT_CONFIG_COUNT="1", GIT_CONFIG_KEY_0=PUSH_FENCE_KEY, GIT_CONFIG_VALUE_0="")
+    return env
+
+
+def explicit_push_urls(root: Path) -> str:
+    """Any remote.*.pushurl lines; git never rewrites those, so the fence can't cover them."""
+    out = subprocess.run(
+        ["git", "-C", str(root), "config", "--get-regexp", r"^remote\..*\.pushurl$"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if out.returncode not in (0, 1):  # 1 is "no match"; anything else, fail closed
+        raise Refused(f"git config failed in {root}: {out.stderr.strip()}")
+    return out.stdout.strip()
+
+
 def run_session(command: list[str], cwd: Path) -> dict[str, object]:
     """Run one claude -p; 'status' is set only when the run itself says capped or crashed."""
     try:
         out = subprocess.run(
             command,
             cwd=cwd,
+            env=push_fenced_env(),
             capture_output=True,
             text=True,
             stdin=subprocess.DEVNULL,
@@ -466,6 +489,11 @@ def launch(sheet: Sheet, session: str, user_present: bool) -> int:
     if any(rhino.device for rhino in sheet.rhinos) and not user_present:
         raise Refused("a rhino needs a device; hardware rhinos run only with --user-present")
     root = repo_root(sheet.path.parent)
+    push_urls = explicit_push_urls(root)
+    if push_urls:
+        raise Refused(
+            f"a remote sets its own pushurl, which the push fence can't rewrite: {push_urls}"
+        )
     for rhino in sheet.rhinos:
         if (root / ".claude" / "worktrees" / f"rom-{rhino.name}").exists():
             raise Refused(f"worktree rom-{rhino.name} already exists; remove it or rename")
@@ -569,7 +597,8 @@ def remove(sheet: Sheet) -> int:
     ok = True
     for rhino in sheet.rhinos:
         worktree = root / ".claude" / "worktrees" / f"rom-{rhino.name}"
-        assert worktree.parent.parent.parent == root, worktree
+        if worktree.parent.parent.parent != root:  # an explicit check: asserts vanish under -O
+            raise Refused(f"worktree path {worktree} is outside {root}; nothing removed")
         if worktree.exists():  # -w leaves it locked, so force twice
             ok = git(root, "worktree", "remove", "--force", "--force", str(worktree)) and ok
         ok = git(root, "branch", "-D", f"worktree-rom-{rhino.name}") and ok
