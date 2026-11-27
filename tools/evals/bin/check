@@ -6,14 +6,13 @@ set root (path resolve (status dirname)/..)
 cd $root; or exit 2
 
 # floors: raise them when files or tests are added, never lower them. A test may skip only for a
-# reason in skip_reasons (no home set up, or a recorded capture not shipped), and at most
-# skipped_max may: the 3 real-home tests skip with an empty HOME; the export raises it for the
-# public copy, which ships without the recorded captures
+# reason in skip_reasons (no home set up), and at most skipped_max may: the 3 real-home tests
+# skip with an empty HOME. They are private-only, so the public copy allows 0
 set py_files_min 38
 set typed_files_min 35 # pyright reads lib/ and tests/ only
-set tests_min 308 # passed, not run: skips don't count toward it
-set skipped_max 27
-set skip_reasons ': (no \S+ here|no \S+ on this machine|tiger-style skill is not installed|recorded fixture \S+ not shipped)$'
+set tests_min 335 # passed, not run: skips don't count toward it
+set skipped_max 0
+set skip_reasons ': (no \S+ here|no \S+ on this machine|tiger-style skill is not installed)$'
 
 function fail
     echo "check: FAIL $argv[1]"

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import unittest
 from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
@@ -25,9 +24,8 @@ SHELL_OK_CREDITS = 0.00306286169154229
 
 def fixture_text(name: str) -> str:
     path = FIXTURES / name
-    if not path.is_file():
-        # recorded CLI captures stay private; the public copy ships without them
-        raise unittest.SkipTest(f"recorded fixture {name} not shipped")
+    # a missing recording is a broken checkout, not a reason to skip
+    assert path.is_file(), f"recorded fixture {name} is missing"
     return path.read_text(encoding="utf-8")
 
 

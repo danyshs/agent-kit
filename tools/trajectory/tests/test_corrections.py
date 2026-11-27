@@ -217,11 +217,11 @@ class EvalRepeatAndCleanTest(unittest.TestCase):
     def test_eval_file_is_skipped_and_counted(self) -> None:
         # goal: a session run under /tmp lists nothing, like the report's eval-traffic rule
         evals = [{**_user("e1", 0, "wrong file"), "cwd": "/tmp/evprobe-x"}]
-        real = [{**_user("r1", 0, "wrong file"), "cwd": "/Users/x/dev"}]
+        real = [{**_user("r1", 0, "wrong file"), "cwd": "/home/x/dev"}]
         _write(self.projects / "-private-tmp-evprobe-x" / "e.jsonl", evals)
-        _write(self.projects / "-Users-x-dev" / "r.jsonl", real)
+        _write(self.projects / "-home-x-dev" / "r.jsonl", real)
         entries, coverage = _scan(self.projects)
-        self.assertEqual([e.project for e in entries], ["-Users-x-dev"])
+        self.assertEqual([e.project for e in entries], ["-home-x-dev"])
         self.assertEqual((coverage.evals, coverage.files), (1, 2))
 
     def test_resent_message_is_listed_once(self) -> None:

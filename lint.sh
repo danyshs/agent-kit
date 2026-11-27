@@ -42,7 +42,7 @@ fish_all() {
   return "$bad"
 }
 
-for tool in ruff pyright shellcheck fish fish_indent; do
+for tool in ruff pyright shellcheck fish fish_indent uvx; do
   command -v "$tool" >/dev/null 2>&1 || { echo "lint: missing $tool"; exit 1; }
 done
 
@@ -63,12 +63,40 @@ while IFS= read -r f; do
 done < <(files)
 check shellcheck "${#sh[@]}" shellcheck -S style "${sh[@]}"
 
+# macOS /bin/sh is bash 3.2, which misparses things shellcheck passes (a case ) inside $( ))
+# shellcheck disable=SC2329  # called by name through check below
+sh_parse() {
+  local f bad=0
+  for f in "$@"; do
+    if head -n 1 "$f" | grep -q bash; then /bin/bash -n "$f" || bad=1; else /bin/sh -n "$f" || bad=1; fi
+  done
+  return "$bad"
+}
+check "sh parse" "${#sh[@]}" sh_parse "${sh[@]}"
+
+# guard.py and prices.json ship in two plugins; a fix to one copy must reach the other
+copies=(guard.py prices.json)
+# shellcheck disable=SC2329  # called by name through check below
+copies_match() {
+  local name bad=0
+  for name in "${copies[@]}"; do
+    cmp "plugins/guards/scripts/$name" "plugins/rhino-owl/scripts/$name" || bad=1
+  done
+  return "$bad"
+}
+check "copies match" "${#copies[@]}" copies_match
+
 fi=()
 while IFS= read -r f; do
   head -n 1 "$f" | grep -Eq '^#!/usr/bin/env fish' && fi+=("$f")
 done < <(files)
 while IFS= read -r f; do fi+=("$f"); done < <(files '*.fish')
 check fish "${#fi[@]}" fish_all "${fi[@]}"
+
+# workflow files: actionlint also runs shellcheck on each run: block
+wf=()
+while IFS= read -r f; do wf+=("$f"); done < <(files '.github/workflows/*.yml')
+check actionlint "${#wf[@]}" uvx --from actionlint-py==1.7.12.25 actionlint -color=false "${wf[@]}"
 
 [ "$failed" -eq 0 ] && echo "lint: clean"
 exit "$failed"
