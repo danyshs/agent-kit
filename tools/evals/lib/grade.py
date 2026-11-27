@@ -27,6 +27,9 @@ Result = tuple[Verdict, str]  # (verdict, evidence)
 Grader = Callable[[RunView, dict[str, object], Path], Result]
 
 WRITE_TOOLS: Final = ("fs_write", "str_replace")
+# a whole-file write's path and text: Kiro's fs_write has path/text, Claude's file_path/content
+WRITE_PATH_KEYS: Final = ("path", "file_path")
+WRITE_TEXT_KEYS: Final = ("text", "content")
 EXEC_TOOL: Final = "execute_bash"
 PASSING_STATUSES: Final = ("ok", "denied_only")
 IMPLICIT_ASSERTION_ID: Final = "no_outside_read"
@@ -55,6 +58,17 @@ def _args_of(event: Event) -> dict[str, object]:
     except json.JSONDecodeError:
         return {}
     return cast(dict[str, object], value) if isinstance(value, dict) else {}
+
+
+def _written_file(event: Event) -> tuple[str, str] | None:
+    """(path, text) of a whole-file write, or None when the args don't carry both."""
+    args = _args_of(event)
+    paths = [args[key] for key in WRITE_PATH_KEYS if isinstance(args.get(key), str)]
+    texts = [args[key] for key in WRITE_TEXT_KEYS if isinstance(args.get(key), str)]
+    if not paths or not texts:
+        return None
+    assert isinstance(paths[0], str) and isinstance(texts[0], str), "both are strings"
+    return paths[0], texts[0]
 
 
 def _calls(view: RunView, tool: str | None) -> list[Event]:
@@ -483,10 +497,9 @@ def extracted_python(view: RunView) -> list[str]:
     """Python sources: first attempted fs_write per .py path, else python fenced blocks (3.4.1)."""
     first_per_path: dict[str, str] = {}
     for event in _calls(view, "fs_write"):
-        args = _args_of(event)
-        path, text = args.get("path"), args.get("text")
-        if isinstance(path, str) and isinstance(text, str) and path.endswith(".py"):
-            first_per_path.setdefault(path, text)
+        written = _written_file(event)
+        if written is not None and written[0].endswith(".py"):
+            first_per_path.setdefault(written[0], written[1])
     if first_per_path:
         return list(first_per_path.values())
     blocks = [
@@ -700,17 +713,16 @@ FISH_FENCE_TAGS: Final = ("fish",)
 
 
 def extracted_files(view: RunView, module: str) -> dict[str, str]:
-    """Solution files by name: the first attempted fs_write per .py/.fish base name, else the
-    first python and first fish fenced block, saved as <module>.py / <module>.fish (3.4.1)."""
+    """Solution files by name: the first attempted fs_write per .py/.fish/.sh base name, else
+    the first python and first fish fenced block, saved as <module>.py / <module>.fish (3.4.1)."""
     assert module and module.isidentifier(), "the module name is validated"
     files: dict[str, str] = {}
     for event in _calls(view, "fs_write"):
-        args = _args_of(event)
-        path, text = args.get("path"), args.get("text")
-        if isinstance(path, str) and isinstance(text, str):
-            name = Path(path).name
+        written = _written_file(event)
+        if written is not None:
+            name = Path(written[0]).name
             if name and is_solution_name(name):
-                files.setdefault(name, text)
+                files.setdefault(name, written[1])
     if files:
         return files
     for tags, suffix in ((PYTHON_FENCE_TAGS[1:], ".py"), (FISH_FENCE_TAGS, ".fish")):

@@ -13,7 +13,7 @@ from pathlib import Path
 from unittest import mock
 
 from lib import hidden, sandbox
-from lib.grade import GRADERS, extracted_files
+from lib.grade import GRADERS, extracted_files, extracted_python
 from lib.hidden import count_tests, is_solution_name, parse_summary, run_hidden_tests
 from lib.run import Event, Verdict
 from tests.helpers_run import call, make_view
@@ -197,9 +197,20 @@ class ExtractionTest(unittest.TestCase):
                 call("fs_write", {"path": "conftest.py", "text": "shadow"}),
                 call("fs_write", {"path": "notes.md", "text": "not code"}),
                 call("fs_write", {"path": "run.fish", "text": "echo hi"}),
+                call("fs_write", {"path": "scripts/gate.sh", "text": "exit 1"}),
             ]
         )
-        self.assertEqual(extracted_files(view, "calc"), {"calc.py": "first", "run.fish": "echo hi"})
+        want = {"calc.py": "first", "run.fish": "echo hi", "gate.sh": "exit 1"}
+        self.assertEqual(extracted_files(view, "calc"), want)
+
+    def test_a_claude_write_counts_like_a_kiro_fs_write(self) -> None:
+        # Claude's Write maps to fs_write with its own arg names; missing them graded every
+        # Claude run on its fenced blocks only
+        args = {"file_path": "/tmp/cwd/scripts/gate.sh", "content": "exit 1"}
+        view = make_view([call("fs_write", args)], "```py\nx = 1\n```")
+        self.assertEqual(extracted_files(view, "m"), {"gate.sh": "exit 1"})
+        py_view = make_view([call("fs_write", {**args, "file_path": "a.py"})])
+        self.assertEqual(extracted_python(py_view), ["exit 1"])
 
     def test_fences_are_named_after_the_module(self) -> None:
         view = make_view([], "```py\nx = 1\n```\n```fish\necho hi\n```\n```sh\nls\n```\n")

@@ -23,7 +23,7 @@ SUMMARY_COUNT_RE: Final = re.compile(
     r"(\d+) (passed|failed|errors?|skipped|xfailed|xpassed|warnings?|deselected)"
 )
 SUMMARY_TIME_RE: Final = re.compile(r"\bin \d+(\.\d+)?s\b")
-SOLUTION_SUFFIXES: Final = (".py", ".fish")
+SOLUTION_SUFFIXES: Final = (".py", ".fish", ".sh")
 SOLUTION_NAME_RE: Final = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*")
 HIDDEN_TIMEOUT_S: Final = 60.0
 TEST_FILES_MAX: Final = 16

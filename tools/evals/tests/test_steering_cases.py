@@ -136,6 +136,8 @@ class AuthoredCasesMixin(_Base):
             shutil.copy(EVALS_ROOT / name, root / name)
         for name in cls.suites:
             shutil.copytree(EVALS_ROOT / "steering" / name, root / "steering" / name)
+        if (EVALS_ROOT / "hidden").is_dir():  # private: no public suite grades with hidden tests
+            shutil.copytree(EVALS_ROOT / "hidden", root / "hidden")
         limits = load_limits(root / "limits.json")
         cls.root = root
         cls.dataset = load_dataset(discover_world(home, root, limits), limits)
@@ -174,9 +176,9 @@ class AuthoredCasesMixin(_Base):
             self.assertIn("full", texts, case.id)
             self.assertIn(f"minus-{case.target}", texts, case.id)
             # none is the empty home: extras are dropped, so the skill is gone and a skill-load
-            # case would fail there for no reason. A skill-instead suite trades none for that arm,
-            # so twelve cases in three arms stay under the suite's cost cap
-            want_none = not case.extra_skills and not self.skill_instead
+            # case would fail there for no reason. Four arms cost more than a suite's cap, so runs
+            # are split by arm
+            want_none = not case.extra_skills
             self.assertEqual("none" in texts, want_none, case.id)
             self.assertEqual("skill-instead" in texts, self.skill_instead, case.id)
 
