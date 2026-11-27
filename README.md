@@ -20,7 +20,7 @@ The main reasons to use the kit. Each changes how Claude plans, debugs, codes or
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
-| ★ `single-evidence-ledger` | Each fact lives in one place. Long debugging keeps a `FACTS.md` of hypotheses, tests and facts with evidence. | Your debugging runs across several sessions. | |
+| ★ `single-evidence-ledger` | Keeps what Claude knows trustworthy across sessions: every fact has one home, notes say when they were last checked, and long research or debugging keeps a `FACTS.md` where a guess can't pass as a fact until a test settles it. | Your work spans many sessions, or Claude acts on stale notes or unproven guesses. | |
 
 ### Resume work
 
@@ -113,7 +113,7 @@ The ★ planning plugins together. For any task where "how should this work?" ha
 
 ### Guesses become facts
 
-For debugging that runs past one session, Claude keeps a `FACTS.md` with four kinds of rows: hypotheses, tests (written before the change, one variable each), facts (with evidence) and conclusions drawn from them. Rows are never deleted or reused, so notes can't quietly drift out of date.
+For research, debugging or reverse-engineering that runs past one session, Claude keeps a `FACTS.md` with four kinds of rows: hypotheses, tests (written before the change, one variable each), facts (with evidence) and conclusions drawn from them. Rows are never deleted or reused, so notes can't quietly drift out of date.
 
 ### Prototypes answer what reading can't
 
