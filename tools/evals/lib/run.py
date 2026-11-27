@@ -78,6 +78,13 @@ CLAUDE_ISOLATION: Final = (
     "--permission-mode",
     "dontAsk",  # anything not in --allowedTools is denied, never prompted
 )
+# claude -p puts "USD budget: $0/$cap; $cap remaining" in the model's context, and a model told
+# "budget approved: $3" weighed that against a $0.15 cap (2026-11-27). Same text in every arm.
+CLAUDE_BUDGET_NOTE: Final = (
+    'The "USD budget" line in your context is the test runner\'s cost cap for this run. '
+    "It is not the user's budget, and the user can't see it. Sub-agent launches here don't "
+    "count against it."
+)
 SKILL_ID_PREFIX: Final = "skill::"
 # the stream's ACP toolId names a skill load; step 4 pilot: the session log named that same call
 # differently (the model called it load_resource), so for these the stream name wins
@@ -1016,12 +1023,15 @@ def build_claude_argv(
     argv += ["--settings", settings]
     if (home_dir / "skills").is_dir():
         argv += ["--plugin-dir", str(home_dir)]
+    appended = CLAUDE_BUDGET_NOTE
     if (home_dir / "CLAUDE.md").is_file():
         argv += ["--add-dir", str(home_dir)]  # read as memory, with CLAUDE_MD_ENV in the env
     else:
         rules = claude_rules_text(home_dir)
         if rules:
-            argv += ["--append-system-prompt", rules]
+            appended += "\n\n" + rules
+    argv += ["--append-system-prompt", appended]
+    assert argv.count("--append-system-prompt") == 1, "a second flag would replace the first"
     if resume_id is not None:
         assert CLAUDE_SESSION_ID_RE.fullmatch(resume_id), "resume id is a claude session id"
         argv += ["--resume", resume_id]

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import tempfile
 import unittest
 from collections.abc import Mapping
@@ -13,7 +14,14 @@ from pathlib import Path
 from unittest import mock
 
 from lib import isolation_probe
-from lib.isolation import isolated_environ, isolation_env, sandbox_settings, scoped_allowed_tools
+from lib.isolation import (
+    SUB_AGENT_DENIAL,
+    isolated_environ,
+    isolation_env,
+    sandbox_settings,
+    scoped_allowed_tools,
+    sub_agent_hook,
+)
 from lib.isolation_probe import PROBE_ATTEMPTS_MAX, probe_isolation
 from lib.run import (
     CLAUDE_ENGINE,
@@ -92,7 +100,8 @@ class SandboxSettingsTest(unittest.TestCase):
                     "allowRead": ["~/.local/share/uv"],
                     "allowWrite": [real],
                 },
-            }
+            },
+            "hooks": {"PreToolUse": [{"matcher": "Agent", "hooks": [sub_agent_hook()]}]},
         }
         self.assertEqual(got, want)
         self.assertEqual(env["UV_CACHE_DIR"], os.path.join(real, "uv"))
@@ -102,6 +111,16 @@ class SandboxSettingsTest(unittest.TestCase):
             run_env = isolated_environ({"VIRTUAL_ENV": "/x/.venv", "PATH": "/bin"}, Path(tmp))
         self.assertNotIn("VIRTUAL_ENV", run_env)
         self.assertEqual(run_env["PATH"], "/bin")
+
+    def test_sub_agent_hook_denies(self) -> None:
+        # goal: the hook's command, run by a real shell, prints the deny decision claude reads
+        command = sub_agent_hook()["command"]
+        out = subprocess.run(["sh", "-c", command], capture_output=True, text=True, timeout=10)
+        self.assertEqual(out.returncode, 0)
+        decision = json.loads(out.stdout)["hookSpecificOutput"]
+        self.assertEqual(decision["hookEventName"], "PreToolUse")
+        self.assertEqual(decision["permissionDecision"], "deny")
+        self.assertEqual(decision["permissionDecisionReason"], SUB_AGENT_DENIAL)
 
 
 def call(cid: str, name: str, status: str | None, paths: tuple[str, ...] = ()) -> Event:

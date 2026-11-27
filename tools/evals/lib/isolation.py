@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Final
@@ -18,6 +19,13 @@ TOOLCHAIN_READ_DIRS: Final = ("~/.local/share/uv",)
 SANDBOX_BLOCKED_TEXT: Final = "Operation not permitted"
 # the runner's own venv lives under ~; inherited, it sends the agent's uv into a denied folder
 ENV_DROP_KEYS: Final = ("VIRTUAL_ENV",)
+# dontAsk doesn't stop the Agent tool, and a sub-agent's spend blew a case's cap with nothing
+# graded (2026-11-27). A PreToolUse deny keeps the tool visible and lists the call in
+# permission_denials, so it's still counted; a deny rule would hide the tool instead.
+SUB_AGENT_TOOL: Final = "Agent"
+SUB_AGENT_DENIAL: Final = (
+    "Sub-agents do not run in this test. The launch is recorded; do not relaunch."
+)
 
 
 def _require(ok: bool, why: str) -> None:
@@ -74,11 +82,25 @@ def sandbox_settings(cache_dir: Path) -> str:
                 "allowRead": list(TOOLCHAIN_READ_DIRS),
                 "allowWrite": [real],
             },
-        }
+        },
+        "hooks": {"PreToolUse": [{"matcher": SUB_AGENT_TOOL, "hooks": [sub_agent_hook()]}]},
     }
     text = json.dumps(settings, sort_keys=True)
     _require('"allowUnsandboxedCommands": false' in text, "the escape hatch is shut")
+    _require(SUB_AGENT_DENIAL in text, "sub-agent launches are denied")
     return text
+
+
+def sub_agent_hook() -> dict[str, str]:
+    """A command hook that denies the call, with the reason the model reads."""
+    decision = {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": SUB_AGENT_DENIAL,
+    }
+    command = "printf '%s' " + shlex.quote(json.dumps({"hookSpecificOutput": decision}))
+    assert "'" in command and SUB_AGENT_DENIAL in command, "the JSON goes out as one quoted word"
+    return {"type": "command", "command": command}
 
 
 def isolation_env(cache_dir: Path) -> dict[str, str]:

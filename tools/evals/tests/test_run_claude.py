@@ -16,6 +16,7 @@ from lib.dataset import Arm, Target, discover_world, lint_all, load_limits
 from lib.home import PLUGIN_MANIFEST, HomeDir, build_home
 from lib.run import (
     CLAUDE_BLOCKS_MAX,
+    CLAUDE_BUDGET_NOTE,
     CLAUDE_DENIALS_MAX,
     CLAUDE_ENGINE,
     CLAUDE_ISOLATION,
@@ -27,6 +28,7 @@ from lib.run import (
     build_claude_argv,
     load_run_limits,
     parse_claude_stream,
+    pick_status,
     run_case,
 )
 from lib.run_cli import parse_run_args
@@ -156,6 +158,20 @@ class ParseTest(unittest.TestCase):
         )
         self.assertFalse(turn.capped)
         self.assertEqual(turn.events[-1].kind, "run_end")
+
+    def test_hook_denied_sub_agent_still_counts(self) -> None:
+        # the eval settings' hook denies every launch; the call stays in the record as a denied
+        # invoke_sub_agent, so launch-count graders see it (stream shape probed 2026-11-27)
+        text = stream(
+            init(),
+            use("a1", "Agent", {"description": "review", "prompt": "review src/a.py"}),
+            done("a1", True, "PreToolUse:Agent hook error: Sub-agents do not run in this test."),
+            result(denied=("a1",)),
+        )
+        turn = turn_of(text)
+        calls = kinds(turn.events, "tool_call")
+        self.assertEqual([(c.name, c.status) for c in calls], [("invoke_sub_agent", "denied")])
+        self.assertEqual(pick_status("ok", turn.events, False), "denied_only")
 
     def test_failed_result_and_unknown_tool(self) -> None:
         turn = turn_of(stream(init(), use("t1", "LSP", {}), done("t1", True), result()))
@@ -302,9 +318,12 @@ class ArgvTest(unittest.TestCase):
         joined = " ".join(bare)
         self.assertIn(" ".join(c for c in CLAUDE_ISOLATION if c), joined.replace("  ", " "))
         self.assertEqual(bare[-2:], ["--", "-p is a prompt"])
-        for flag in ("--plugin-dir", "--append-system-prompt", "--resume", "--allowedTools"):
+        for flag in ("--plugin-dir", "--resume", "--allowedTools"):
             self.assertNotIn(flag, bare)
             self.assertIn(flag, full)
+        self.assertEqual(bare[bare.index("--append-system-prompt") + 1], CLAUDE_BUDGET_NOTE)
+        appended = full[full.index("--append-system-prompt") + 1]
+        self.assertTrue(appended.startswith(CLAUDE_BUDGET_NOTE + "\n\n"))
         self.assertEqual(
             full[full.index("--allowedTools") + 1],
             f"Bash,Read(/{real_cwd}/**),Read(/{real_home}/**)",
@@ -344,7 +363,8 @@ class ClaudeMdRulesTest(unittest.TestCase):
             )
         self.assertEqual(imports, STEERING_ALWAYS)
         self.assertEqual(argv[argv.index("--add-dir") + 1], str(dest))
-        self.assertNotIn("--append-system-prompt", argv)
+        # rules come in as memory; the system prompt gets only the budget note
+        self.assertEqual(argv[argv.index("--append-system-prompt") + 1], CLAUDE_BUDGET_NOTE)
 
     def test_no_rules_no_claude_md(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
