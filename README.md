@@ -153,7 +153,7 @@ Opinionated workflow comforts (off by default), separate from core safety and ev
 | [`attention-levels`](plugins/attention-levels/README.md) | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 | `claude plugin install attention-levels@agent-kit` |
 | [`turn-sound`](plugins/turn-sound/README.md) | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime; silent on Linux) | `claude plugin install turn-sound@agent-kit` |
 | [`code-voice`](plugins/code-voice/README.md) | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | | `claude plugin install code-voice@agent-kit` |
-| `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. `/resume-setup` gets you started. | You're job hunting with a LaTeX resume. | python3 or uv; a LaTeX build | `claude plugin install resume-kit@agent-kit` |
+| `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. Now its own repo: [danyshs/resume-kit](https://github.com/danyshs/resume-kit). | You're job hunting with a LaTeX resume. | python3 or uv; a LaTeX build | `claude plugin marketplace add danyshs/resume-kit`, then `claude plugin install resume-kit@resume-kit` |
 
 ## Status
 

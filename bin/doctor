@@ -9,7 +9,7 @@ list=$(claude plugin list 2>/dev/null | grep '@agent-kit' | sed 's/^[^a-z]*//')
 # installed PLUGIN: true when PLUGIN@agent-kit is in the list
 installed() { printf '%s\n' "$list" | grep -q "^$1@agent-kit"; }
 failed=0
-for tool in python3:attention-levels,guards,rhino-owl jq:turn-sound,status-line git:pre-push,status-line ffmpeg:turn-sound uv:resume-kit latexmk:resume-kit; do
+for tool in python3:attention-levels,guards,rhino-owl jq:turn-sound,status-line git:pre-push,status-line ffmpeg:turn-sound; do
 	name=${tool%%:*}; used=${tool#*:}
 	if command -v "$name" >/dev/null 2>&1; then ok "$name"; continue; fi
 	needed=""

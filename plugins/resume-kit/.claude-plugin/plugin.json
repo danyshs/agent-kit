@@ -1,9 +1,0 @@
-{
-  "name": "resume-kit",
-  "version": "0.1.0",
-  "description": "Checks a LaTeX resume against a job posting the way a screener reads it: sharp checks by script, judgment calls by voted agent runs, and every claim traced to your own evidence file.",
-  "author": {
-    "name": "danyshs"
-  },
-  "license": "Apache-2.0"
-}
