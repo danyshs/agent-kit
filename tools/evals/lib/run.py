@@ -61,7 +61,10 @@ CLAUDE_TRUST_NAMES: Final = {
     "disclose_context": "Skill",
 }
 # rate_limit_event: the subscription's quota state, seen on a real run (claude 2026-11-20); ignored
-CLAUDE_LINE_TYPES: Final = frozenset({"system", "assistant", "user", "result", "rate_limit_event"})
+# tool_progress: a heartbeat every 30 s while a tool runs (claude 2.1.332, 2026-11-27); ignored
+CLAUDE_LINE_TYPES: Final = frozenset(
+    {"system", "assistant", "user", "result", "rate_limit_event", "tool_progress"}
+)
 CLAUDE_CAPPED_SUBTYPE: Final = "error_max_budget_usd"  # claude -p stopped at --max-budget-usd
 CLAUDE_PATH_KEYS: Final = ("file_path", "path", "notebook_path")
 CLAUDE_BLOCKS_MAX: Final = 256  # content blocks per message

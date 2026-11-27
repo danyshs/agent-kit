@@ -178,6 +178,22 @@ class ParseTest(unittest.TestCase):
         self.assertEqual(kinds(turn.events, "tool_call")[0].name, "LSP")
         self.assertEqual(kinds(turn.events, "tool_result")[0].status, "failed")
 
+    def test_tool_progress_heartbeat_parses(self) -> None:
+        # a tool running past 30 s sends heartbeat lines; three runs died on them (2026-11-27)
+        beat: Line = {
+            "type": "tool_progress",
+            "tool_use_id": "t1-heartbeat-0",
+            "tool_name": "Bash",
+            "parent_tool_use_id": "t1",
+            "elapsed_time_seconds": 30,
+            "heartbeat": True,
+            "session_id": SID,
+        }
+        bash = use("t1", "Bash", {"command": "sleep 40"})
+        turn = turn_of(stream(init(), bash, beat, done("t1"), result()))
+        calls = kinds(turn.events, "tool_call")
+        self.assertEqual([(c.name, c.status) for c in calls], [("execute_bash", "approved")])
+
     def test_capped_stream_parses(self) -> None:
         turn = turn_of(stream(init(), result("error_max_budget_usd", result=None)))
         self.assertTrue(turn.capped)
