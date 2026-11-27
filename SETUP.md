@@ -1,6 +1,6 @@
 # Setup details
 
-The [README](README.md) covers the normal install. This page covers the two pieces that need a manual step, and how to remove things.
+The [README](README.md) covers the normal install. This page covers the two pieces that need a manual step, how to remove things, and where things are in this repo. Settings for each plugin are in its own README under `plugins/<name>/`.
 
 ## Pre-push
 
@@ -37,16 +37,6 @@ Needs bash, jq and git.
 
 Restart Claude Code.
 
-## Guards: changing the limits
-
-- Budget: type `budget $5` (or `budget off`) as the first line of a message.
-- Turn cap: type `turn cap 30m` (or `turn cap off`).
-- The model ceiling is the `ceiling` entry in the plugin's `scripts/prices.json`.
-
-## Turn sound
-
-Install jq and ffmpeg for the per-session sounds (`brew install jq ffmpeg` on a Mac, `sudo apt install jq ffmpeg` on Ubuntu). Without ffmpeg, a Mac plays a system chime and Linux stays silent.
-
 ## Removing things
 
 - One module: `claude plugin uninstall <name>@agent-kit`
@@ -54,4 +44,19 @@ Install jq and ffmpeg for the per-session sounds (`brew install jq ffmpeg` on a 
 
 ## Copying rules by hand
 
-Every rule is also a plain file in `rules/`. You can paste one into your own `~/.claude/CLAUDE.md` instead of installing the plugin. This works for every rule except `attention-levels`, `guards` and `pre-push`, which need their plugin's scripts.
+Every rule is also a plain file in `rules/`. You can paste one into your own `~/.claude/CLAUDE.md` instead of installing the plugin. This works for every rule except `attention-levels`, `guards`, `pre-push` and `rhino-owl`, which need their plugin's scripts. The `debugging-discipline`, `egm-helper` and `fork-pr-check` rules are short and point to a skill with the detail, so also copy `plugins/<name>/skills/<name>/` into `~/.claude/skills/`.
+
+## Repo layout
+
+| Path | What it is |
+|---|---|
+| `plugins/<name>/` | One folder per plugin, each with a README. |
+| `rules/` | Every rule as a plain file, to read before installing or to copy by hand (above). |
+| `.claude-plugin/marketplace.json` | The plugin list Claude Code installs from. |
+| `snippets/statusline.sh` | The optional status line. |
+| `bin/doctor` | Checks the tools the optional plugins need and lists what you installed. |
+| `lint.sh` | The lint gate CI runs: ruff, pyright, shellcheck, fish and actionlint. |
+| `SNAPSHOT` | The Claude Code version this was last tested with. |
+| `tools/` | The eval and trajectory tools ([tools/README.md](tools/README.md)). |
+
+Installed plugins live under `~/.claude/plugins/` on your machine.
