@@ -26,8 +26,7 @@ from lib.skill_report import (
 )
 
 LIMITS = ReportLimits(
-    resamples=300,
-    min_cases_for_ci=8,
+    min_cases_for_test=8,
     ledger_lines_max=1000,
     demote_words_max=350,
     demote_cases_min=12,
@@ -188,17 +187,30 @@ class CountsTest(unittest.TestCase):
         runs = latest(read([row("a", "with", False), row("a", "with", True)]))
         self.assertEqual([r.passed for r in runs], [True])
 
+    def test_a_run_of_another_case_version_is_not_replaced(self) -> None:
+        rows = [row("a", "with", False, case_sha="v0"), row("a", "with", True, case_sha="v1")]
+        self.assertEqual(sorted(str(r.case_sha) for r in latest(read(rows))), ["v0", "v1"])
+
 
 class VerdictTest(unittest.TestCase):
     def flags(self, values: list[float]) -> dict[str, float]:
         return {f"c{i}": v for i, v in enumerate(values)}
 
-    def test_keep_needs_eight_cases_and_an_interval_above_zero(self) -> None:
+    def test_keep_needs_eight_cases_and_a_small_two_sided_p(self) -> None:
         eight = self.flags([1.0] * 8)
         zeros = self.flags([0.0] * 8)
         self.assertEqual(verdict_for(eight, zeros, LIMITS), "keep")
         seven = self.flags([1.0] * 7)
         self.assertEqual(verdict_for(seven, self.flags([0.0] * 7), LIMITS), "watch", "n < 8")
+        six_and_one = self.flags([1.0] * 6 + [0.0, 1.0])
+        self.assertEqual(
+            verdict_for(six_and_one, self.flags([0.0] * 6 + [1.0, 1.0]), LIMITS),
+            "watch",
+            "p = 1/8 with one case the other way",
+        )
+
+    def test_a_skill_that_costs_cases_is_harm(self) -> None:
+        self.assertEqual(verdict_for(self.flags([0.0] * 8), self.flags([1.0] * 8), LIMITS), "harm")
 
     def test_without_arm_never_failing_is_non_discriminating(self) -> None:
         ones = self.flags([1.0] * 8)
@@ -206,7 +218,7 @@ class VerdictTest(unittest.TestCase):
 
     def test_no_pairs_is_watch_and_no_verdict_says_delete(self) -> None:
         self.assertEqual(verdict_for({}, {}, LIMITS), "watch")
-        self.assertEqual(verdict_for({"a": 0.0}, {"a": 1.0}, LIMITS), "non-discriminating")
+        self.assertEqual(verdict_for({"a": 0.0}, {"a": 1.0}, LIMITS), "watch", "a case it cost")
 
 
 class ReportCliTest(unittest.TestCase):
@@ -234,6 +246,7 @@ class ReportCliTest(unittest.TestCase):
             self.assertIn("trig-pos-dev=1/1", text, "the rerun replaced the first line")
             self.assertIn("credits_latest_runs=0.1000 credits_all_lines=0.3500", text)
             self.assertTrue(lines[-1].startswith("report: suite=skill/tiger-style"), lines[-1])
+            self.assertIn("versions=unchecked", lines[-1])
             self.assertNotIn("delete", "\n".join(lines).lower())
             self.assertEqual(run_skill_report(["steering/x"], root)[1], 2)
             self.assertEqual(run_skill_report(["skill/x", "--bad", "1"], root)[1], 2)

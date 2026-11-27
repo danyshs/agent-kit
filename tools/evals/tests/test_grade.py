@@ -486,6 +486,7 @@ def sample_record(run_id: str = "r1", status: RunStatus = "ok") -> RunRecord:
         model_id=spec.model_id,
         cli_version="3.2.1",
         home_sha="abc",
+        case_sha="c0de",
         status=status,
         wall_ms=12,
         credits=0.003,

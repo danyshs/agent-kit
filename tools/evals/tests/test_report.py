@@ -5,34 +5,38 @@ one thing fails."""
 
 from __future__ import annotations
 
+import itertools
 import json
 import shutil
 import tempfile
 import unittest
 from dataclasses import replace
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
 from lib.cli import EVALS_ROOT
+from lib.dataset import case_sha
 from lib.report import (
     FileReport,
     LedgerRun,
     ReportLimits,
     build_report,
+    current_versions,
+    effect_sign,
     latest_runs,
     load_report_limits,
     paired_diff,
     parse_report_args,
-    pass_pow_k,
     pass_rate,
     read_ledger,
     render_table,
     run_report,
+    sign_flip_p,
 )
 
 LIMITS = ReportLimits(
-    resamples=500,
-    min_cases_for_ci=8,
+    min_cases_for_test=8,
     ledger_lines_max=1000,
     demote_words_max=350,
     demote_cases_min=12,
@@ -53,6 +57,7 @@ def run(case: str, arm: str, passed: bool, **over: Any) -> LedgerRun:
         status="ok",
         passed=passed,
         credits=0.01,
+        case_sha="v1",
     )
     return replace(base, **over)
 
@@ -84,36 +89,79 @@ def report_for(runs: list[LedgerRun], words: int | None = SHORT_RULE_WORDS) -> F
     return build_report(SUITE, MODEL, runs, 3104, words, LIMITS)
 
 
+def ones(count: int, value: int) -> list[Fraction]:
+    return [Fraction(value)] * count
+
+
+def brute_p(diffs: list[Fraction]) -> Fraction:
+    """Every sign pattern spelled out: the definition sign_flip_p must match."""
+    observed = abs(sum(diffs, Fraction(0)))
+    patterns = list(itertools.product((1, -1), repeat=len(diffs)))
+    extreme = sum(
+        1
+        for signs in patterns
+        if abs(sum(s * d for s, d in zip(signs, diffs, strict=True))) >= observed
+    )
+    return Fraction(extreme, len(patterns))
+
+
 class ScoringTest(unittest.TestCase):
-    def test_pass_rate_and_pow_k_differ_when_one_run_fails(self) -> None:
-        self.assertEqual(pass_rate([True, True, False]), 2 / 3)
-        self.assertEqual(pass_pow_k([True, True, False]), 0.0)
-        self.assertEqual(pass_pow_k([True, True, True]), 1.0)
-        self.assertEqual(pass_pow_k([True]), pass_rate([True]))
+    def test_pass_rate_is_exact(self) -> None:
+        self.assertEqual(pass_rate([True, True, False]), Fraction(2, 3))
+        self.assertEqual(pass_rate([True]), 1)
 
-    def test_paired_diff_below_min_cases_has_no_interval(self) -> None:
-        result = paired_diff([1.0] * 7, [0.0] * 7, 1, resamples=500, min_cases=8)
-        self.assertEqual((result.n_cases, result.mean_diff), (7, 1.0))
-        self.assertIsNone(result.ci90_low)
-        self.assertIsNone(result.ci90_high)
+    def test_sign_flip_p_at_one_repeat_is_the_exact_sign_test(self) -> None:
+        # (cases the rule helped, cases it harmed) -> p; ties carry no sign and don't count
+        for helped, harmed, ties, p in (
+            (6, 0, 0, Fraction(1, 32)),
+            (6, 0, 2, Fraction(1, 32)),
+            (6, 1, 1, Fraction(1, 8)),
+            (4, 0, 4, Fraction(1, 8)),
+            (4, 1, 3, Fraction(3, 8)),
+            (8, 0, 0, Fraction(1, 128)),
+            (8, 1, 0, Fraction(20, 512)),
+            (0, 0, 8, Fraction(1)),
+        ):
+            diffs = ones(helped, 1) + ones(harmed, -1) + ones(ties, 0)
+            self.assertEqual(sign_flip_p(diffs), p, (helped, harmed, ties))
 
-    def test_paired_diff_constant_gap_gives_a_point_interval(self) -> None:
-        result = paired_diff([1.0] * 8, [0.0] * 8, 1, resamples=500, min_cases=8)
-        self.assertEqual((result.ci90_low, result.ci90_high), (1.0, 1.0))
+    def test_sign_flip_p_matches_every_sign_pattern_on_repeat_rates(self) -> None:
+        third = Fraction(1, 3)
+        for diffs in (
+            [third, 2 * third, -third, Fraction(1), 2 * third, Fraction(0), -2 * third],
+            [Fraction(1, 2), Fraction(1, 2), Fraction(-1), Fraction(1, 2)],
+            [third] * 9,
+        ):
+            self.assertEqual(sign_flip_p(diffs), brute_p(diffs), diffs)
 
-    def test_paired_diff_mixed_interval_brackets_the_mean_and_is_seeded(self) -> None:
-        with_arm = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0]
-        without = [0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]
-        first = paired_diff(with_arm, without, 7, resamples=500, min_cases=8)
-        again = paired_diff(with_arm, without, 7, resamples=500, min_cases=8)
-        self.assertEqual(first, again)
-        assert first.ci90_low is not None and first.ci90_high is not None
-        self.assertLessEqual(first.ci90_low, first.mean_diff)
-        self.assertGreaterEqual(first.ci90_high, first.mean_diff)
-        self.assertLess(first.ci90_low, first.ci90_high)
+    def test_paired_diff_counts_both_ways(self) -> None:
+        result = paired_diff(
+            [Fraction(1), Fraction(1), Fraction(0), Fraction(1)],
+            [Fraction(0), Fraction(1), Fraction(1), Fraction(1)],
+        )
+        self.assertEqual((result.n_cases, result.helped, result.harmed), (4, 1, 1))
+        self.assertEqual((result.mean_diff, result.p_two_sided), (0.0, 1.0))
 
     def test_paired_diff_empty_is_zero_cases(self) -> None:
-        self.assertEqual(paired_diff([], [], 1, resamples=10, min_cases=8).n_cases, 0)
+        self.assertEqual(paired_diff([], []).n_cases, 0)
+
+    def test_effect_sign_needs_the_case_floor_and_a_small_p(self) -> None:
+        def sign(helped: int, harmed: int, ties: int) -> int:
+            return effect_sign(
+                paired_diff(
+                    ones(helped, 1) + ones(harmed, 0) + ones(ties, 1),
+                    ones(helped, 0) + ones(harmed, 1) + ones(ties, 1),
+                ),
+                LIMITS,
+            )
+
+        self.assertEqual(sign(8, 0, 0), 1)
+        self.assertEqual(sign(0, 8, 0), -1)
+        self.assertEqual(sign(7, 0, 0), 0, "n < 8 is no verdict whatever p says")
+        self.assertEqual(sign(6, 0, 2), 1, "p = 1/32")
+        self.assertEqual(sign(6, 1, 1), 0, "p = 1/8: one case the other way turns keep to watch")
+        self.assertEqual(sign(5, 0, 3), 0, "p = 1/16 is over 0.05")
+        self.assertEqual(effect_sign(None, LIMITS), 0)
 
 
 class LedgerTest(unittest.TestCase):
@@ -155,6 +203,20 @@ class LedgerTest(unittest.TestCase):
             path.write_text("{}\n{}\n{}\n", encoding="utf-8")
             self.assertIn("limit is 2", str(read_ledger(path, 2)))
 
+    def test_case_sha_is_optional_but_never_blank_or_mistyped(self) -> None:
+        old = self.read([json.dumps(ledger_row("c1", "full", True))])
+        new = self.read([json.dumps(ledger_row("c1", "full", True, case_sha="abc"))])
+        assert not isinstance(old, str) and not isinstance(new, str)
+        self.assertEqual((old[0].case_sha, new[0].case_sha), (None, "abc"))
+        for bad in ("", 5):
+            line = json.dumps(ledger_row("c1", "full", True, case_sha=bad))
+            self.assertIn("line 1", str(self.read([line])), bad)
+
+    def test_a_rerun_of_another_case_version_does_not_replace_the_run(self) -> None:
+        v1 = run("c1", "full", False)
+        v2 = run("c1", "full", True, run_id="later", case_sha="v2")
+        self.assertEqual(len(latest_runs([v1, v2], MODEL)), 2)
+
     def test_later_line_wins_and_other_models_are_dropped(self) -> None:
         old = run("c1", "full", False)
         new = run("c1", "full", True, run_id="later")
@@ -170,16 +232,66 @@ class VerdictTest(unittest.TestCase):
     def test_removal_breaking_eight_cases_is_keep(self) -> None:
         report = report_for(grid({c: (True, False, False) for c in self.cases(8)}))
         self.assertTrue(report.verdict.startswith("keep"), report.verdict)
-        self.assertEqual(len(report.changed), 8)
+        self.assertIn("p=0.008 two-sided", report.verdict)
+        self.assertNotIn("better without", report.verdict)
+        self.assertEqual(len(report.helped), 8)
+
+    def test_a_rule_that_costs_cases_is_harm(self) -> None:
+        report = report_for(grid({c: (False, True, True) for c in self.cases(8)}))
+        self.assertTrue(report.verdict.startswith("harm"), report.verdict)
+        self.assertIn("better without the rule: c0, c1", report.verdict)
+        self.assertEqual((report.broken, len(report.harmed)), ((), 8))
+
+    def test_one_case_the_other_way_turns_six_wins_from_keep_to_watch(self) -> None:
+        # the orchestration suite: six cases helped, and a survey case that passes only without
+        # the rule. A one-sided gate dropped that case as broken in full and called it a keep.
+        outcomes = {c: (True, False, False) for c in self.cases(6)}
+        outcomes |= {"t0": (True, True, True), "t1": (True, True, True)}
+        kept = report_for(grid(outcomes)).verdict
+        self.assertTrue(kept.startswith("keep: removal breaks 6 case(s), p=0.031"), kept)
+        outcomes["t1"] = (False, True, True)
+        report = report_for(grid(outcomes))
+        self.assertEqual((report.broken, report.harmed), ((), ("t1",)))
+        self.assertTrue(
+            report.verdict.startswith("watch: removal changed 7 case(s), 6 worse and 1 better"),
+            report.verdict,
+        )
+        self.assertIn("p=0.125", report.verdict)
+
+    def test_keep_names_the_cases_better_without_the_rule(self) -> None:
+        outcomes = {c: (True, False, False) for c in self.cases(8)}
+        outcomes["t0"] = (False, True, True)
+        verdict = report_for(grid(outcomes)).verdict
+        self.assertTrue(verdict.startswith("keep: removal breaks 8 case(s), p=0.039"), verdict)
+        self.assertTrue(verdict.endswith("better without the rule: t0"), verdict)
 
     def test_removal_breaking_few_cases_is_watch_with_raw_counts(self) -> None:
         outcomes = {c: (True, True, True) for c in self.cases(3)}
         outcomes["c0"] = (True, False, False)
         report = report_for(grid(outcomes))
         self.assertTrue(report.verdict.startswith("watch"), report.verdict)
-        self.assertEqual(report.changed, ("c0",))
+        self.assertEqual(report.helped, ("c0",))
         assert report.vs_minus is not None
-        self.assertIsNone(report.vs_minus.ci90_low)
+        self.assertEqual((report.vs_minus.n_cases, report.vs_minus.helped), (3, 1))
+
+    def test_a_case_only_better_without_the_rule_is_watch_not_null(self) -> None:
+        outcomes = {c: (True, True, True) for c in self.cases(8)}
+        outcomes["c0"] = (False, True, True)
+        report = report_for(grid(outcomes))
+        self.assertEqual((report.helped, report.harmed), ((), ("c0",)))
+        self.assertTrue(
+            report.verdict.startswith("watch: removal changed 1 case(s), 0 worse and 1 better"),
+            report.verdict,
+        )
+
+    def test_five_wins_and_no_loss_is_still_watch_at_p_0_0625(self) -> None:
+        # five cases one way is 2 of 32 sign patterns: a keep needs six
+        outcomes = {c: (True, True, True) for c in self.cases(8)}
+        for case in ("c0", "c1", "c2", "c3", "c4"):
+            outcomes[case] = (True, False, False)
+        report = report_for(grid(outcomes))
+        self.assertTrue(report.verdict.startswith("watch"), report.verdict)
+        self.assertIn("p=0.062", report.verdict)
 
     def test_null_with_a_clean_none_arm_is_non_discriminating(self) -> None:
         report = report_for(grid({c: (True, True, True) for c in self.cases(8)}))
@@ -190,7 +302,7 @@ class VerdictTest(unittest.TestCase):
         outcomes["c3"] = (True, True, False)
         report = report_for(grid(outcomes))
         self.assertTrue(report.verdict.startswith("watch"), report.verdict)
-        self.assertEqual(report.none_failed, ("c3",))
+        self.assertEqual(report.none_worse, ("c3",))
         self.assertNotIn("delete", report.verdict.replace("not deletable", ""))
 
     def test_case_failing_in_full_is_broken_and_out_of_the_tally(self) -> None:
@@ -205,9 +317,10 @@ class VerdictTest(unittest.TestCase):
         runs = [run(c, "full", True) for c in self.cases(3)]
         self.assertTrue(report_for(runs).verdict.startswith("incomplete"))
 
-    def test_no_case_passes_in_full_is_incomplete(self) -> None:
+    def test_every_case_broken_in_every_arm_is_incomplete(self) -> None:
         report = report_for(grid({c: (False, False, False) for c in self.cases(3)}))
-        self.assertIn("no case passes in full", report.verdict)
+        self.assertIn("incomplete: no case to score", report.verdict)
+        self.assertEqual(report.broken, ("c0", "c1", "c2"))
 
     def test_unfinished_runs_are_excluded_and_counted(self) -> None:
         runs = grid({c: (True, True, True) for c in self.cases(2)})
@@ -215,12 +328,21 @@ class VerdictTest(unittest.TestCase):
         runs.append(run("c1", "none", False, status="harness_error", run_id="y"))
         report = report_for(runs)
         self.assertEqual(report.excluded_runs, 2)
-        self.assertEqual(report.none_failed, ())
+        self.assertEqual(report.none_worse, ())
 
-    def test_repeats_make_the_sanity_gate_need_every_run(self) -> None:
+    def test_a_case_full_fails_only_some_of_the_time_is_scored_at_its_rate(self) -> None:
         runs = [run("c0", "full", True), run("c0", "full", False, repeat_index=1, run_id="r1")]
+        runs += [run("c0", "minus-shell", True), run("c0", "minus-shell", True, repeat_index=1)]
         report = report_for(runs)
-        self.assertEqual(report.broken, ("c0",))
+        self.assertEqual((report.broken, report.harmed), ((), ("c0",)))
+        assert report.vs_minus is not None
+        self.assertEqual(report.vs_minus.mean_diff, -0.5)
+
+    def test_a_case_only_another_arm_passes_is_not_broken(self) -> None:
+        report = report_for(grid({"c0": (False, False, True)}))
+        self.assertEqual((report.broken, report.none_worse), ((), ()))
+        assert report.vs_none is not None
+        self.assertEqual(report.vs_none.harmed, 1)
 
 
 class NullAdviceTest(unittest.TestCase):
@@ -337,8 +459,41 @@ class RenderAndCliTest(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertIn("file_bytes=40 file_words=8", lines[0])
             self.assertTrue(lines[-1].startswith("report: "), lines[-1])
+            self.assertIn("versions=unchecked", lines[-1], "no cases.json beside the ledger")
             usage, code = run_report(["nope"], root, home)
             self.assertEqual((code, len(usage)), (2, 1))
+
+    def test_cases_json_sets_older_case_versions_aside(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root, home = Path(tmp) / "evals", Path(tmp) / "home"
+            (root / "ledger").mkdir(parents=True)
+            (root / "steering" / "shell").mkdir(parents=True)
+            (home / "steering").mkdir(parents=True)
+            shutil.copy(EVALS_ROOT / "limits.json", root / "limits.json")
+            entry: dict[str, object] = {"id": "c0", "prompt": "list the files"}
+            cases_path = root / "steering" / "shell" / "cases.json"
+            cases_path.write_text(json.dumps([entry]), encoding="utf-8")
+            now = case_sha(entry, root, 256)
+            rows = [
+                ledger_row("c0", "full", False, case_sha="older"),
+                ledger_row("c0", "full", False, run_id="unversioned"),
+                ledger_row("c0", "full", True, case_sha=now, run_id="r-now"),
+                ledger_row("c0", "minus-shell", False, case_sha=now),
+            ]
+            (root / "ledger" / "steering_shell.jsonl").write_text(
+                "\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8"
+            )
+            args = ["steering/shell", "--home", str(home), "--model", MODEL]
+            lines, code = run_report(args, root, home)
+            self.assertEqual(code, 0, lines)
+            self.assertIn("older case versions set aside: 2", lines)
+            self.assertTrue(any(line.startswith("c0 ") and "1/1" in line for line in lines), lines)
+            self.assertIn("versions=checked", lines[-1])
+            cases_path.write_text("{nope", encoding="utf-8")
+            broken, code = run_report(args, root, home)
+            self.assertEqual(
+                (code, broken[-1]), (1, "report: suite=steering/shell unreadable cases")
+            )
 
     def test_no_ledger_directory_reports_no_ledger_and_exits_1(self) -> None:
         # the public copy ships without ledger/: a fresh clone must say so, not crash
@@ -354,10 +509,35 @@ class RenderAndCliTest(unittest.TestCase):
 
     def test_real_limits_json_carries_the_report_constants(self) -> None:
         limits = load_report_limits(EVALS_ROOT / "limits.json")
-        self.assertEqual((limits.resamples, limits.min_cases_for_ci), (2000, 8))
+        self.assertEqual(limits.min_cases_for_test, 8)
         advice = (limits.demote_words_max, limits.demote_cases_min, limits.prune_cases_min)
         self.assertEqual(advice, (350, 12, 16))
         self.assertGreater(limits.ledger_lines_max, 0)
+
+
+class CaseVersionTest(unittest.TestCase):
+    def test_case_sha_follows_the_case_and_its_fixture_not_key_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "fx").mkdir()
+            (root / "fx" / "a.txt").write_text("one", encoding="utf-8")
+            entry: dict[str, object] = {"id": "c0", "prompt": "p", "fixture": "fx"}
+            first = case_sha(entry, root, 8)
+            self.assertEqual(case_sha({"fixture": "fx", "prompt": "p", "id": "c0"}, root, 8), first)
+            self.assertNotEqual(case_sha({**entry, "prompt": "q"}, root, 8), first)
+            (root / "fx" / "a.txt").write_text("two", encoding="utf-8")
+            self.assertNotEqual(case_sha(entry, root, 8), first, "a fixture edit is a new version")
+
+    def test_current_versions_keeps_only_runs_of_each_case_as_it_is_now(self) -> None:
+        runs = [
+            run("c0", "full", True),
+            run("c0", "full", True, case_sha="v0"),
+            run("c0", "full", True, case_sha=None),
+            run("gone", "full", True),  # a case no longer in cases.json
+            run("gone", "full", True, case_sha=None),  # ... run before versioning
+        ]
+        kept, aside = current_versions(runs, {"c0": "v1"})
+        self.assertEqual(([r.case_sha for r in kept], aside), (["v1"], 4))
 
 
 class SkillInsteadTest(unittest.TestCase):
@@ -382,13 +562,13 @@ class SkillInsteadTest(unittest.TestCase):
         report = report_for(self.runs(12), words=351)
         self.assertTrue(report.verdict.startswith("demote"), report.verdict)
         self.assertIn("as a skill it held all 12 cases", report.verdict)
-        self.assertEqual(report.skill_changed, ())
+        self.assertEqual(report.skill_worse, ())
         assert report.vs_skill is not None
         self.assertEqual(report.vs_skill.n_cases, 12)
 
     def test_one_changed_case_is_enough_to_ask(self) -> None:
         report = report_for(self.runs(12, minus_fails=1), words=351)
-        self.assertEqual(report.changed, ("c0",))
+        self.assertEqual(report.helped, ("c0",))
         self.assertIn("as a skill it held all 12 cases", report.verdict)
 
     def test_each_floor_keeps_the_rule_always_on(self) -> None:
@@ -405,7 +585,7 @@ class SkillInsteadTest(unittest.TestCase):
                 verdict = report_for(runs, words=words).verdict
                 self.assertTrue(verdict.startswith("keep"), verdict)
         dropped = report_for(self.runs(12, skill_fails="c3"), words=351)
-        self.assertEqual(dropped.skill_changed, ("c3",))
+        self.assertEqual(dropped.skill_worse, ("c3",))
         self.assertIsNone(report_for(no_skill_runs, words=351).vs_skill)
 
     def test_render_shows_the_skill_column_and_its_lines(self) -> None:
@@ -413,7 +593,7 @@ class SkillInsteadTest(unittest.TestCase):
         self.assertTrue(lines[1].rstrip().endswith("skill-instead"), lines[1])
         self.assertTrue(any(line.startswith("c3 ") and line.endswith("0/1") for line in lines))
         self.assertTrue(any(line.startswith("full vs skill-instead: n=12") for line in lines))
-        self.assertIn("changed as a skill: c3", lines)
+        self.assertIn("worse as a skill: c3", lines)
 
 
 if __name__ == "__main__":

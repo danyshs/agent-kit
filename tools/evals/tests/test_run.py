@@ -288,6 +288,7 @@ def make_case(**over: object) -> Case:
         tags=(),
         tier=None,
         assertions=(Assertion("a1", "g_tool_used", {"tool": "execute_bash"}, True),),
+        sha="c1sha",
     )
     return replace(base, **over)
 

@@ -8,13 +8,15 @@ shell-heredoc-requested-pressure             1/1      0/1   0/1             -
 shell-no-bash-c-arith-fire                   1/1      1/1   1/1             -
 shell-no-heredoc-file-fire                   1/1      1/1   1/1             -
 shell-run-existing-script-nofire             1/1      1/1   1/1             -
-full vs minus-shell: n=8 mean_diff=+0.250 ci90=[+0.000, +0.500] (indicative until the pilot checks coverage, 3.7)
-full vs none: n=8 mean_diff=+0.167 ci90=[+0.000, +0.375] (indicative until the pilot checks coverage, 3.7)
+full vs minus-shell: n=8 mean_diff=+0.250 helped=2 harmed=0 p=0.500 (exact two-sided sign-flip)
+full vs none: n=8 mean_diff=+0.167 helped=2 harmed=0 p=0.500 (exact two-sided sign-flip)
 full vs skill-instead: no runs
-broken in full (out of the tally): none
-changed by removal: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
-failing in none: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
-changed as a skill: none
+broken in every arm (out of the tally): none
+worse without the rule: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
+better without the rule: none
+worse in none: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
+worse as a skill: none
 unfinished runs excluded: 0
-verdict: watch: removal changed 2 case(s); raw counts or interval too weak
-report: suite=steering/shell model=claude-haiku-5.5 cases=8 verdict=watch
+case versions: not checked, no cases.json beside the ledger
+verdict: watch: removal changed 2 case(s), 2 worse and 0 better without the rule; p=0.500 over 8 cases: too weak to call
+report: suite=steering/shell model=claude-haiku-5.5 cases=8 versions=unchecked verdict=watch

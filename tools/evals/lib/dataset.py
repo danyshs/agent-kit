@@ -6,6 +6,7 @@ a broken limits.json or an unreadable target dir raises ValueError for the CLI b
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -128,6 +129,7 @@ class Case:
     tags: tuple[str, ...]
     tier: str | None
     assertions: tuple[Assertion, ...]
+    sha: str  # case_sha: a new value when the case or its fixture is edited
     rule_skill_description: str | None = None  # set iff an arm is skill-instead (as_skill.json)
 
 
@@ -806,6 +808,56 @@ def _tree_bytes(path: Path, files_max: int) -> int | None:
     return total
 
 
+def files_under(root: Path, files_max: int) -> list[Path] | None:
+    """Sorted relative file paths under root; None when there are more than files_max."""
+    assert files_max > 0, "files_max must be positive"
+    found: list[Path] = []
+    for dir_path, dir_names, file_names in os.walk(root):
+        dir_names.sort()
+        for name in sorted(file_names):
+            found.append((Path(dir_path) / name).relative_to(root))
+            if len(found) > files_max:
+                return None
+    found.sort()
+    assert len(found) <= files_max, "walk stayed within its bound"
+    return found
+
+
+def tree_sha(root: Path, files_max: int) -> str | None:
+    """sha256 over sorted relative paths and bytes; None when the tree is over files_max."""
+    assert root.is_dir(), "root must be a directory"
+    files = files_under(root, files_max)
+    if files is None:
+        return None
+    digest = hashlib.sha256()
+    for rel in files:
+        data = (root / rel).read_bytes()
+        digest.update(f"{rel.as_posix()}\0{len(data)}\0".encode())
+        digest.update(data)
+    assert len(digest.hexdigest()) == 64, "sha256 hex digest"
+    return digest.hexdigest()
+
+
+def case_sha(entry: dict[str, object], root: Path, files_max: int) -> str:
+    """sha256 of the case as cases.json has it plus its fixture, so editing either makes a new
+    version and a report never mixes runs of two versions. Key order and spacing don't count."""
+    assert files_max > 0, "files_max must be positive"
+    text = json.dumps(entry, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    digest = hashlib.sha256(text.encode())
+    fixture = entry.get("fixture")
+    if isinstance(fixture, str) and fixture:
+        path = root / fixture
+        tree: str | None = None
+        if path.is_dir():
+            tree = tree_sha(path, files_max)
+        elif path.is_file():
+            tree = hashlib.sha256(path.read_bytes()).hexdigest()
+        digest.update(f"\0fixture\0{tree or 'missing or over the file limit'}".encode())
+    sha = digest.hexdigest()
+    assert len(sha) == 64, "sha256 hex digest"
+    return sha
+
+
 def _check_fixture(raw: object, world: World, limits: Limits) -> str | None:
     assert limits.fixture_bytes_max > 0, "fixture byte bound is positive"
     if not isinstance(raw, str) or not raw:
@@ -945,6 +997,7 @@ def _parse_case(
         tags=tuple(cast(list[str], entry.get("tags", []))),
         tier=cast("str | None", entry.get("tier")),
         assertions=assertions,
+        sha=case_sha(entry, world.root, limits.fixture_files_max),
     )
 
 

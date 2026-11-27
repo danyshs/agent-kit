@@ -814,6 +814,7 @@ def record_to_json(record: RunRecord) -> dict[str, object]:
         "model_id": record.model_id,
         "cli_version": record.cli_version,
         "home_sha": record.home_sha,
+        "case_sha": record.case_sha,
         "status": record.status,
         "wall_ms": record.wall_ms,
         "credits": record.credits,
@@ -836,7 +837,9 @@ def record_to_json(record: RunRecord) -> dict[str, object]:
         ],
     }
     assert row["arm"] and row["model_id"], "every line carries its arm and model (5.5)"
-    assert row["home_sha"] and row["engine"], "every line carries its home sha and engine"
+    assert row["home_sha"] and row["case_sha"] and row["engine"], (
+        "every line carries its shas and engine"
+    )
     return row
 
 

@@ -114,6 +114,7 @@ class AuthoredCasesMixin(_Base):
     suites: tuple[str, ...]
     planted: dict[str, Spec]
     role_mix: ClassVar[dict[str, int]] = {"fire": 4, "no_fire": 2, "pressure": 2}
+    extra_roles: ClassVar[dict[str, dict[str, int]]] = {}  # suite -> cases on top of role_mix
     skill_instead: ClassVar[bool] = False
     root: Path
     dataset: Dataset
@@ -146,15 +147,20 @@ class AuthoredCasesMixin(_Base):
     def cases_of(self, suite: str) -> list[Case]:
         return [c for c in self.dataset.cases if c.target == suite]
 
+    def mix_of(self, suite: str) -> dict[str, int]:
+        extra = self.extra_roles.get(suite, {})
+        roles = {*self.role_mix, *extra}
+        return {r: self.role_mix.get(r, 0) + extra.get(r, 0) for r in sorted(roles)}
+
     def test_everything_loads_without_rejections(self) -> None:
         self.assertEqual(self.dataset.rejections, ())
-        cases_per_suite = sum(self.role_mix.values())
-        self.assertEqual(len(self.dataset.cases), cases_per_suite * len(self.suites))
+        expected = sum(sum(self.mix_of(suite).values()) for suite in self.suites)
+        self.assertEqual(len(self.dataset.cases), expected)
 
     def test_each_suite_has_its_role_mix(self) -> None:
         for suite in self.suites:
             roles = Counter(c.role for c in self.cases_of(suite))
-            self.assertEqual(dict(roles), self.role_mix, suite)
+            self.assertEqual(dict(roles), self.mix_of(suite), suite)
 
     def test_every_rule_is_used_and_every_case_names_a_rule(self) -> None:
         for suite in self.suites:

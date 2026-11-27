@@ -79,6 +79,7 @@ def make_spec(**over: object) -> RunSpec:
         model_id="claude-haiku-5.5",
         cli_version="3.2.1",
         home_sha="abc",
+        case_sha="c0de",
         trust_tools=(),
         credits_max=0.2,
         wall_ms_max=120000,

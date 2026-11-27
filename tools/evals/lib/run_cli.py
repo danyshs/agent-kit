@@ -188,6 +188,7 @@ def _error_record(spec: RunSpec, runs_dir: Path, note: str) -> RunRecord:
         model_id=spec.model_id,
         cli_version=spec.cli_version,
         home_sha=spec.home_sha or "unbuilt",
+        case_sha=spec.case_sha,
         status="harness_error",
         wall_ms=0,
         credits=None,

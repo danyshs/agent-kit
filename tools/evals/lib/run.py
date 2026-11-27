@@ -152,6 +152,7 @@ class RunSpec:
     model_id: str
     cli_version: str
     home_sha: str
+    case_sha: str  # dataset.case_sha of the case as it was planned
     trust_tools: tuple[str, ...]  # the --trust-tools names, already mapped
     credits_max: float
     wall_ms_max: int
@@ -175,6 +176,7 @@ class RunRecord:
     model_id: str
     cli_version: str
     home_sha: str
+    case_sha: str
     status: RunStatus
     wall_ms: int
     credits: float | None
@@ -396,6 +398,7 @@ def plan_runs(
         )
         if repeats_override is not None:
             repeats = repeats_override
+        assert case.sha, "a loaded case carries its sha"
         trust = tuple(trust_names[tool] for tool in case.trust_tools)
         for arm in case.arms:
             if arm_filter is not None and arm_text(arm) != arm_filter:
@@ -412,6 +415,7 @@ def plan_runs(
                         model_id,
                         cli_version,
                         "",
+                        case.sha,
                         trust,
                         credits_max,
                         wall_ms_max,
@@ -1220,6 +1224,7 @@ def _finish_run(
         model_id=spec.model_id,
         cli_version=spec.cli_version,
         home_sha=spec.home_sha,
+        case_sha=spec.case_sha,
         status=status,
         wall_ms=prog.wall_ms,
         credits=prog.credits,

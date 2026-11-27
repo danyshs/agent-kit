@@ -6,15 +6,22 @@ never hooks, never mcp.json (release 1 has no MCP suites). Expected failures com
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from lib.dataset import FENCE_LINE, SKILL_INSTEAD_ARM, VALUE_ARMS, VALUE_SKILL, Arm, Target
+from lib.dataset import (
+    FENCE_LINE,
+    SKILL_INSTEAD_ARM,
+    VALUE_ARMS,
+    VALUE_SKILL,
+    Arm,
+    Target,
+    files_under,
+    tree_sha,
+)
 
 SKILL_FILE: Final = "SKILL.md"
 VALUE_RULE: Final = "tiger-style-on-branches"  # the always-on rule the skill+rule arm adds
@@ -98,42 +105,12 @@ def plan_home(
     return HomePlan(skills, tuple(sorted(steering)), None, rule_skill=target.name)
 
 
-def _files_under(root: Path, files_max: int) -> list[Path] | None:
-    """Sorted relative file paths under root; None when there are more than files_max."""
-    assert files_max > 0, "files_max must be positive"
-    found: list[Path] = []
-    for dir_path, dir_names, file_names in os.walk(root):
-        dir_names.sort()
-        for name in sorted(file_names):
-            found.append((Path(dir_path) / name).relative_to(root))
-            if len(found) > files_max:
-                return None
-    found.sort()
-    assert len(found) <= files_max, "walk stayed within its bound"
-    return found
-
-
-def tree_sha(root: Path, files_max: int) -> str | None:
-    """sha256 over sorted relative paths and bytes; None when the tree is over files_max."""
-    assert root.is_dir(), "root must be a directory"
-    files = _files_under(root, files_max)
-    if files is None:
-        return None
-    digest = hashlib.sha256()
-    for rel in files:
-        data = (root / rel).read_bytes()
-        digest.update(f"{rel.as_posix()}\0{len(data)}\0".encode())
-        digest.update(data)
-    assert len(digest.hexdigest()) == 64, "sha256 hex digest"
-    return digest.hexdigest()
-
-
 def _copy_dir(src: Path, dest: Path, files_max: int) -> str | None:
     """Copy a skill dir without following symlinks; a str is the reason it could not be."""
     assert files_max > 0 and not dest.exists(), "files_max positive, dest is a fresh path"
     if not (src / SKILL_FILE).is_file():
         return f"{src} has no {SKILL_FILE}"
-    files = _files_under(src, files_max)
+    files = files_under(src, files_max)
     if files is None:
         return f"{src} has more than {files_max} files"
     shutil.copytree(src, dest, symlinks=False, ignore=shutil.ignore_patterns("__pycache__"))

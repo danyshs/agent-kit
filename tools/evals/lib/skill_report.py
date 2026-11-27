@@ -1,7 +1,9 @@
 """`eval report skill/<name>`: raw counts per case and arm for a skill suite (design 6, 7.2 step 4).
 
-Reads ledger/skill_<name>.jsonl only: no dataset, no model calls. Never says "delete": a verdict
-is watch, keep or non-discriminating. Intervals only at n >= MIN_CASES_FOR_CI.
+Reads ledger/skill_<name>.jsonl, and the suite's cases.json only to keep the runs of each case as
+it stands now (case_sha); no model calls. Never says "delete": a verdict is watch, keep, harm or
+non-discriminating. The test is an exact two-sided sign-flip test over cases, both ways, and a
+verdict needs MIN_CASES_FOR_TEST cases.
 """
 
 from __future__ import annotations
@@ -10,16 +12,20 @@ import json
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
 from typing import Final, cast
 
 from lib.report import (
-    BOOTSTRAP_SEED,
     EXIT_BAD_LEDGER,
     EXIT_OK,
     EXIT_USAGE,
     FINISHED_STATUSES,
+    P_TEST_MAX,
     ReportLimits,
+    current_case_shas,
+    current_versions,
+    effect_sign,
     load_report_limits,
     paired_diff,
 )
@@ -58,6 +64,7 @@ class SkillRun:
     credits: float | None
     skills_read: tuple[str, ...]
     grades: tuple[tuple[str, str, str], ...]  # (assertion id, verdict, evidence)
+    case_sha: str | None = None  # None on lines written before cases were versioned
 
 
 @dataclass(frozen=True)
@@ -100,6 +107,7 @@ def _skill_run(text: str, line_no: int) -> SkillRun | str:
     grades, skills = _grade_tuples(row.get("grades")), row.get("skills_read")
     credits, repeat = row.get("credits"), row.get("repeat_index")
     texts = [row.get(k) for k in ("case_id", "arm", "status", "model_id")]
+    sha = row.get("case_sha")
     credits_ok = credits is None or (
         isinstance(credits, (int, float)) and not isinstance(credits, bool)
     )
@@ -111,6 +119,7 @@ def _skill_run(text: str, line_no: int) -> SkillRun | str:
         or not credits_ok
         or grades is None
         or not isinstance(skills, list)
+        or (sha is not None and (not isinstance(sha, str) or not sha))
     ):
         return f"ledger line {line_no}: missing or mistyped field"
     return SkillRun(
@@ -123,6 +132,7 @@ def _skill_run(text: str, line_no: int) -> SkillRun | str:
         credits=None if credits is None else float(cast(float, credits)),
         skills_read=tuple(str(s) for s in cast(list[object], skills)),
         grades=grades,
+        case_sha=sha,
     )
 
 
@@ -157,10 +167,11 @@ def component_of(case_id: str) -> str:
 
 
 def latest(runs: Sequence[SkillRun]) -> list[SkillRun]:
-    """One run per (case, arm, repeat); a later ledger line replaces an earlier one."""
-    seen: dict[tuple[str, str, int], SkillRun] = {}
+    """One run per (case version, arm, repeat); a later ledger line replaces an earlier one of
+    the same case version."""
+    seen: dict[tuple[str, str | None, str, int], SkillRun] = {}
     for run in runs:  # bounded: read_skill_ledger capped the list
-        seen[(run.case_id, run.arm, run.repeat_index)] = run
+        seen[(run.case_id, run.case_sha, run.arm, run.repeat_index)] = run
     assert len(seen) <= len(runs), "dedup never adds runs"
     assert not runs or seen, "a non-empty ledger keeps at least one run"
     return list(seen.values())
@@ -258,24 +269,22 @@ def case_flags(
 def verdict_for(
     with_flags: dict[str, float], without_flags: dict[str, float], limits: ReportLimits
 ) -> str:
-    """watch | keep | non-discriminating. keep needs n >= MIN_CASES_FOR_CI and a 90% interval
-    above 0; non-discriminating when the without arm never failed. Never drop or delete."""
+    """keep | harm | watch | non-discriminating. keep and harm need n >= MIN_CASES_FOR_TEST and a
+    two-sided p <= P_TEST_MAX, one each way; non-discriminating when the without arm never failed
+    and the skill never cost a case. Never drop or delete."""
     shared = sorted(set(with_flags) & set(without_flags))
     assert len(shared) <= min(len(with_flags), len(without_flags)), "shared is a subset"
-    assert limits.min_cases_for_ci > 0, "the CI floor is positive"
+    assert limits.min_cases_for_test > 0, "the case floor is positive"
     if not shared:
         return "watch"  # no paired data
-    if all(without_flags[c] == 1.0 for c in shared):
-        return "non-discriminating"
     result = paired_diff(
-        [with_flags[c] for c in shared],
-        [without_flags[c] for c in shared],
-        BOOTSTRAP_SEED,
-        resamples=limits.resamples,
-        min_cases=limits.min_cases_for_ci,
+        [Fraction(with_flags[c]) for c in shared], [Fraction(without_flags[c]) for c in shared]
     )
-    if result.ci90_low is not None and result.ci90_low > 0:
-        return "keep"
+    sign = effect_sign(result, limits)
+    if sign != 0:
+        return "keep" if sign > 0 else "harm"
+    if result.harmed == 0 and all(without_flags[c] == 1.0 for c in shared):
+        return "non-discriminating"
     return "watch"
 
 
@@ -366,11 +375,18 @@ def _cells(counts: dict[str, tuple[int, int]]) -> str:
 
 
 def render_skill_report(
-    suite: str, model_id: str, raw: Sequence[SkillRun], limits: ReportLimits
+    suite: str,
+    model_id: str,
+    raw: Sequence[SkillRun],
+    limits: ReportLimits,
+    shas: dict[str, str] | None = None,
 ) -> list[str]:
+    """shas is case id -> case_sha from cases.json; None scores every version, unchecked."""
     assert suite.startswith("skill/"), "a skill suite"
     assert all(r.model_id == model_id for r in raw), "the caller filtered to one model"
-    runs = latest(raw)
+    runs, set_aside = latest(raw), None
+    if shas is not None:
+        runs, set_aside = current_versions(runs, shas)
     act = activation_counts(runs, WITH_ARM)
     lines = [f"{suite} model={model_id} runs={len(runs)} ledger_lines={len(raw)}"]
     lines += _case_rows(runs)
@@ -380,8 +396,16 @@ def render_skill_report(
         f"write[{arm}] PASS/total: " + _cells(write_totals(runs, arm))
         for arm in (WITH_ARM, WITHOUT_ARM)
     ]
-    lines.append(f"intervals only at n >= {limits.min_cases_for_ci}; none printed below that")
+    lines.append(
+        f"verdicts: exact two-sided sign-flip test, keep or harm at n >= "
+        f"{limits.min_cases_for_test} cases and p <= {P_TEST_MAX}"
+    )
     lines.append("status: " + _status_counts(runs, raw))
+    lines.append(
+        "case versions: not checked, no cases.json beside the ledger"
+        if set_aside is None
+        else f"older case versions set aside: {set_aside}"
+    )
     verdicts = {
         "activation": activation_verdict(act),
         "review-recall": _compare(runs, ["rev-fire"], ["recall"], limits),
@@ -393,6 +417,7 @@ def render_skill_report(
     lines += [f"verdict {name}: {value}" for name, value in verdicts.items()]
     lines.append(
         f"report: suite={suite} model={model_id} runs={len(runs)} "
+        f"versions={'unchecked' if set_aside is None else 'checked'} "
         + " ".join(f"{k}={v}" for k, v in verdicts.items())
     )
     assert lines[-1].startswith("report: "), "the status line is last"
@@ -412,8 +437,10 @@ def run_skill_report(argv: list[str], root: Path) -> tuple[list[str], int]:
     runs = read_skill_ledger(ledger, limits.ledger_lines_max)
     if isinstance(runs, str):
         return [runs, f"report: suite={argv[0]} no ledger"], EXIT_BAD_LEDGER
-    lines = render_skill_report(
-        argv[0], model_id, [r for r in runs if r.model_id == model_id], limits
-    )
+    shas = current_case_shas(root, "skill", argv[0].partition("/")[2])
+    if isinstance(shas, str):
+        return [shas, f"report: suite={argv[0]} unreadable cases"], EXIT_BAD_LEDGER
+    mine = [r for r in runs if r.model_id == model_id]
+    lines = render_skill_report(argv[0], model_id, mine, limits, shas)
     assert lines[-1].startswith("report: "), "the status line is last"
     return lines, EXIT_OK

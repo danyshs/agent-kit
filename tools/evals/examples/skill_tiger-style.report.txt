@@ -63,10 +63,11 @@ review[with]: in-category 9/9 outside 6/6 precision 15/23 severity 13/15 clean-c
 review[without]: in-category 6/9 outside 6/6 precision 12/20 severity 10/12 clean-control P0/P1=2 parse_failures=0
 write[with] PASS/total: length=2/2 assertions=1/2 loops=2/2 units=2/2 pyright=2/2
 write[without] PASS/total: length=4/4 assertions=4/4 loops=4/4 units=3/4 pyright=3/4
-intervals only at n >= 8; none printed below that
+verdicts: exact two-sided sign-flip test, keep or harm at n >= 8 cases and p <= 0.05
 status: contaminated=5 harness_errors=0 aborted=0 credits_latest_runs=0.2539 credits_all_lines=0.2998
+case versions: not checked, no cases.json beside the ledger
 verdict activation: watch
 verdict review-recall: non-discriminating
 verdict review-precision-clean: watch
-verdict write-mechanical: non-discriminating
-report: suite=skill/tiger-style model=claude-haiku-5-5 runs=68 activation=watch review-recall=non-discriminating review-precision-clean=watch write-mechanical=non-discriminating
+verdict write-mechanical: watch
+report: suite=skill/tiger-style model=claude-haiku-5-5 runs=68 versions=unchecked activation=watch review-recall=non-discriminating review-precision-clean=watch write-mechanical=watch
