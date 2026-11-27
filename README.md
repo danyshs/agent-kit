@@ -2,7 +2,7 @@
 
 <p align="center"><a href="#flagship-plugins">Plugins</a> · <a href="#install">Install</a> · <a href="#how-it-works">How it works</a> · <a href="REFERENCE.md">Reference</a></p>
 
-*Updated November 2026 · macOS and Linux · Apache-2.0*
+*Updated November 2026 · tested on macOS · Apache-2.0*
 
 Claude Code is quick to start writing. Sometimes too quick: it builds on a guess, reads an exit code of 0 as proof a check passed, or starts on a plan nobody argued with. agent-kit is my Claude Code setup, split into small plugins that fix those habits, plus a few quality-of-life extras like a sound when it's your turn.
 
@@ -72,13 +72,13 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
 | `attention-levels` | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 |
-| `turn-sound` | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime) |
+| `turn-sound` | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime; silent on Linux) |
 
 ### Git and GitHub
 
 | Plugin | What it does | Pick it if | Needs |
 |---|---|---|---|
-| `pre-push` | Asks you to confirm a review ran before a branch's first push. A reminder, not a lock. | You want a review before anything leaves your machine. | git; [manual step](SETUP.md#pre-push) |
+| `pre-push` | Before a branch's first push (not main), asks you to confirm a review ran. It takes your word for it. | You want a review before anything leaves your machine. | git, `tiger-style-core`; [manual step](SETUP.md#pre-push) |
 | `fork-pr-check` | In a fork, Claude checks the right repo before saying "there's no PR". | You contribute to other people's projects through forks. | |
 
 ## Install
@@ -94,7 +94,7 @@ claude plugin install egm@egm
 
 The last two add Google's EGM (Elephant-Goldfish Model) plugin, which the Starter pack builds on. Start a new Claude Code session afterwards, since rules load when a session starts.
 
-**Check it worked:** inside a session, ask Claude *"Quote every line in your context that starts with rule:"*. You should get one line per installed rule, like `rule: debugging-discipline`.
+**Check it worked:** inside a session, ask Claude *"Quote every line in your context that starts with rule:"*. You should get one line per installed rule, like `rule: egm-helper`.
 
 For any other plugin: `claude plugin install <name>@agent-kit`. To remove one: `claude plugin uninstall <name>@agent-kit`. Some plugins need python3, jq or ffmpeg; to check what you have:
 
@@ -121,9 +121,9 @@ When the docs are thin or the forums disagree, `rhino-owl` runs up to four throw
 
 ## Status
 
-**A personal setup, shared as is.** It's tested on macOS with the Claude Code version in [`SNAPSHOT`](SNAPSHOT). Windows is untested. Questions and bugs go to [GitHub issues](https://github.com/danyshs/agent-kit/issues).
+**A personal setup, shared as is.** It's tested on macOS with the Claude Code version in [`SNAPSHOT`](SNAPSHOT). Linux should work (the scripts are plain sh and Python) but is untested; Windows is untested. Questions and bugs go to [GitHub issues](https://github.com/danyshs/agent-kit/issues).
 
-**No rule is proven yet.** I test whether each rule changes what Claude does, with and without it, and the suites are still too small to say. One early sign: with the tiger-style skill, Claude found 9 of 9 planted bugs in review, against 6 of 9 without it. The test tools are in [`tools/`](tools/README.md) to fork.
+**No rule is proven yet.** I test whether each rule changes what Claude does, with and without it, and the suites are still too small to say. One early sign: with the tiger-style skill, Claude found 9 of 9 planted bugs of the kind it targets in review, against 6 of 9 without it (a small model, one suite). The test tools are in [`tools/`](tools/README.md) to fork.
 
 **Next:** bigger eval suites, detectors for loops and repeated reads in real sessions, and turning corrections I keep making into test cases.
 
