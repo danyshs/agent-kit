@@ -145,7 +145,7 @@ class TreesTest(unittest.TestCase):
                 "data": {"toolUseId": "t1", "name": "read", "input": {}},
             }
             make_headless(store, "real", [part], "/home/dev/proj")
-            make_headless(store, "probe", [part], "/private/tmp")
+            make_headless(store, "probe", [part], str(Path("/tmp").resolve()))
             lines, code, _ = mine_store(store, "--out", str(Path(tmp) / "report.md"))
             text = (Path(tmp) / "report.md").read_text(encoding="utf-8")
         self.assertEqual(code, 0, lines)
@@ -159,12 +159,20 @@ class TreesTest(unittest.TestCase):
         self.assertIn("| `read` | 1 |", text)
 
     def test_is_eval_traffic_both_ways(self) -> None:
-        roots = [Path("/tmp").resolve()]
-        self.assertTrue(is_eval_traffic(["/tmp/evcwd-x"], roots))
-        self.assertTrue(is_eval_traffic(["/private/tmp"], roots))
-        self.assertTrue(is_eval_traffic(["/home/a", "/tmp/y"], roots))
-        self.assertFalse(is_eval_traffic(["/home/a/tmp"], roots))
-        self.assertFalse(is_eval_traffic([], roots))
+        # a cwd counts whether it names the root through a symlink or by its real path, as macOS
+        # /tmp and /private/tmp do; the test makes its own link so it holds on Linux too
+        with tempfile.TemporaryDirectory() as tmp:
+            real = Path(tmp).resolve() / "real"
+            real.mkdir()
+            link = Path(tmp) / "link"
+            link.symlink_to(real)
+            roots = [real]
+            self.assertTrue(is_eval_traffic([str(link / "evcwd-x")], roots))
+            self.assertTrue(is_eval_traffic([str(real)], roots))
+            self.assertTrue(is_eval_traffic(["/home/a", str(link / "y")], roots))
+            self.assertFalse(is_eval_traffic([f"{real}-other"], roots))
+            self.assertFalse(is_eval_traffic(["/home/a/tmp"], roots))
+            self.assertFalse(is_eval_traffic([], roots))
 
     def test_sub_executions_are_attached_to_their_session(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

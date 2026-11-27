@@ -28,7 +28,7 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
-          brew install shellcheck
+          brew install fish shellcheck  # fish: the fish-parse grader's tests run it
           uv tool install ruff==0.17.6
           uv tool install pyright==1.1.414
       # one eval test runs the shipped tiger-style suite against an installed copy of the skill;
@@ -61,7 +61,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq bubblewrap
+          sudo apt-get install -y -qq bubblewrap fish
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           uv tool install ruff==0.17.6
           uv tool install pyright==1.1.414
