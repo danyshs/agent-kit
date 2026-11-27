@@ -50,7 +50,7 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 
 | Plugin | What it does | Pick it if | Needs | Install |
 |---|---|---|---|---|
-| `tiger-style-<language>` | TigerStyle details for python, typescript, rust, go, c, cpp, java, lua or fish. | You use `tiger-style-core`. Take the languages you write. | `tiger-style-core` | `claude plugin install tiger-style-python@agent-kit` (swap in your language) |
+| `tiger-style-<language>` | TigerStyle details for one language. Languages: `python`, `typescript`, `rust`, `go`, `c`, `cpp`, `java`, `lua`, `fish`. | You use `tiger-style-core`. Take the languages you write. | `tiger-style-core` | `claude plugin install tiger-style-python@agent-kit` (replace `python` with your language) |
 | `code-voice` | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | | `claude plugin install code-voice@agent-kit` |
 
 ### Lessons from working with Claude
@@ -83,12 +83,12 @@ Smaller helpers: add-ons for the flagships, limits and quality-of-life. Take the
 
 ## Install
 
-You need [Claude Code](https://code.claude.com/docs/en/setup): `claude --version` should print a version number. Add the kit, then install what you picked. For the Starter pack, paste these commands, one at a time:
+You need [Claude Code](https://code.claude.com/docs/en/setup): `claude --version` should print a version number. Add the kit, then install what you picked. **The Starter pack is four plugins, not everything:** `single-evidence-ledger`, `egm-helper`, `antagonist-protagonist` and `tiger-style-core`. Every other plugin is a separate install, with its command in the Install column of the tables above.
+
+For the Starter pack, paste these commands, one at a time:
 
 ```
 claude plugin marketplace add danyshs/agent-kit
-# Starter pack only: single-evidence-ledger, egm-helper, antagonist-protagonist, tiger-style-core.
-# Not everything. Any other plugin: claude plugin install <name>@agent-kit (see the tables above).
 claude plugin install starter@agent-kit
 claude plugin marketplace add google/elephant-goldfish-model
 claude plugin install egm@egm
