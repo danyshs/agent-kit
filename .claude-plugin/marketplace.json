@@ -11,152 +11,98 @@
     {
       "name": "starter",
       "source": "./plugins/starter",
-      "description": "Installs the Starter pack in one go: tiger-style-core, antagonist-protagonist, egm-helper and single-evidence-ledger.",
+      "description": "Installs the Starter pack in one go: tiger-style, antagonist-protagonist, single-evidence-ledger and guards.",
       "category": "starter"
     },
     {
-      "name": "tiger-style-core",
-      "source": "./plugins/tiger-style-core",
-      "description": "TigerBeetle's TigerStyle coding discipline for any language: safety first, a limit on everything, assertions, and a review mode.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-python",
-      "source": "./plugins/tiger-style-python",
-      "description": "tiger-style rules for Python. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-typescript",
-      "source": "./plugins/tiger-style-typescript",
-      "description": "tiger-style rules for TypeScript. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-rust",
-      "source": "./plugins/tiger-style-rust",
-      "description": "tiger-style rules for Rust. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-go",
-      "source": "./plugins/tiger-style-go",
-      "description": "tiger-style rules for Go. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-c",
-      "source": "./plugins/tiger-style-c",
-      "description": "tiger-style rules for C. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-cpp",
-      "source": "./plugins/tiger-style-cpp",
-      "description": "tiger-style rules for C++. Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-java",
-      "source": "./plugins/tiger-style-java",
-      "description": "tiger-style rules for Java (Android first). Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-lua",
-      "source": "./plugins/tiger-style-lua",
-      "description": "tiger-style rules for Lua (Neovim configs and plugins). Needs tiger-style-core.",
-      "category": "starter"
-    },
-    {
-      "name": "tiger-style-fish",
-      "source": "./plugins/tiger-style-fish",
-      "description": "tiger-style rules for fish shell. Needs tiger-style-core.",
-      "category": "starter"
+      "name": "tiger-style",
+      "source": "./plugins/tiger-style",
+      "description": "TigerBeetle's TigerStyle coding discipline: safety first, a limit on everything, assertions, and a review mode. Rules for Python, TypeScript, Rust, Go, C, C++, Java, Lua and fish, read only for the language at hand.",
+      "category": "flagship"
     },
     {
       "name": "debugging-discipline",
       "source": "./plugins/debugging-discipline",
       "description": "Seven debugging rules, each with the incident behind it.",
-      "category": "starter"
+      "category": "support"
     },
     {
       "name": "antagonist-protagonist",
       "source": "./plugins/antagonist-protagonist",
       "description": "Before you approve a plan, one read-only agent argues against it and one defends it; you decide.",
-      "category": "starter"
+      "category": "flagship"
     },
     {
       "name": "egm-helper",
       "source": "./plugins/egm-helper",
       "description": "When to use Google's EGM design-doc workflow, and the house rules around it. Needs the EGM plugin.",
-      "category": "starter"
+      "category": "flagship"
     },
     {
       "name": "when-to-ask",
       "source": "./plugins/when-to-ask",
       "description": "When the agent should just do it and when it should ask: recommend-and-proceed, one done-gate, lead with the decision.",
-      "category": "optional"
+      "category": "support"
     },
     {
       "name": "attention-levels",
       "source": "./plugins/attention-levels",
       "description": "Type (ENABLE_LOW_ENERGY) on a tired day and the agent asks fewer questions; HIGH makes it ask more.",
-      "category": "optional"
+      "category": "personal"
     },
     {
       "name": "guards",
       "source": "./plugins/guards",
       "description": "Opt-in spending limits: refuses sub-agent launches past a budget you set, any model priced above Opus 5.5, and more than 10M tokens in one turn.",
-      "category": "optional"
+      "category": "flagship"
     },
     {
       "name": "rhino-owl",
       "source": "./plugins/rhino-owl",
       "description": "Exploration by throwaway prototypes: up to four capped, sandboxed runs try different routes, then a fresh agent turns what they found into ledger rows. Needs guards.",
-      "category": "optional"
+      "category": "flagship"
     },
     {
       "name": "turn-sound",
       "source": "./plugins/turn-sound",
       "description": "A short sound when it's your turn, different for every session, so parallel sessions can be told apart by ear.",
-      "category": "optional"
+      "category": "personal"
     },
     {
       "name": "pre-push",
       "source": "./plugins/pre-push",
       "description": "A git hook that asks you to confirm a code review ran before a branch's first push, plus the rule that tells Claude how to pass it.",
-      "category": "optional"
+      "category": "support"
     },
     {
       "name": "agent-orchestration",
       "source": "./plugins/agent-orchestration",
       "description": "When to use sub-agents and when not to, how to brief them, and how to keep context small.",
-      "category": "extras"
+      "category": "support"
     },
     {
       "name": "single-evidence-ledger",
       "source": "./plugins/single-evidence-ledger",
       "description": "One home per fact, no stale notes, and a FACTS.md ledger of facts, derivations, hypotheses and tests for long debugging work.",
-      "category": "starter"
+      "category": "flagship"
     },
     {
       "name": "code-voice",
       "source": "./plugins/code-voice",
       "description": "One engineer's taste in comments and code: terse, explains why, no class hierarchies by default. Keep it only if it fits you.",
-      "category": "extras"
+      "category": "personal"
     },
     {
       "name": "fork-pr-check",
       "source": "./plugins/fork-pr-check",
       "description": "In a fork, a bare gh lookup can miss a PR that exists. Pin the upstream and name the repo.",
-      "category": "extras"
+      "category": "support"
     },
     {
       "name": "resume-kit",
       "source": "./plugins/resume-kit",
       "description": "Checks a LaTeX resume against a job posting the way a screener reads it: sharp checks by script, judgment calls by voted agent runs, and every claim traced to your own evidence file.",
-      "category": "extras"
+      "category": "personal"
     }
   ]
 }

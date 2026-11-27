@@ -1,6 +1,6 @@
 {
   "name": "egm-helper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "When to use Google's EGM design-doc workflow, and the house rules around it. Needs the EGM plugin.",
   "author": {
     "name": "danyshs"

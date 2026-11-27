@@ -1,0 +1,9 @@
+{
+  "name": "tiger-style",
+  "version": "0.1.0",
+  "description": "TigerBeetle's TigerStyle coding discipline: safety first, a limit on everything, assertions, and a review mode. Rules for Python, TypeScript, Rust, Go, C, C++, Java, Lua and fish, read only for the language at hand.",
+  "author": {
+    "name": "danyshs"
+  },
+  "license": "Apache-2.0"
+}

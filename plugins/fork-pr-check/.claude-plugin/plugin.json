@@ -1,6 +1,6 @@
 {
   "name": "fork-pr-check",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "In a fork, a bare gh lookup can miss a PR that exists. Pin the upstream and name the repo.",
   "author": {
     "name": "danyshs"

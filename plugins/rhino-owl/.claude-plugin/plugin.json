@@ -1,6 +1,6 @@
 {
   "name": "rhino-owl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Exploration by throwaway prototypes: up to four capped, sandboxed runs try different routes, then a fresh agent turns what they found into ledger rows. Needs guards.",
   "author": {
     "name": "danyshs"

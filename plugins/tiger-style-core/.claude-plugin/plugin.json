@@ -1,9 +1,0 @@
-{
-  "name": "tiger-style-core",
-  "version": "0.1.0",
-  "description": "TigerBeetle's TigerStyle coding discipline for any language: safety first, a limit on everything, assertions, and a review mode.",
-  "author": {
-    "name": "danyshs"
-  },
-  "license": "Apache-2.0"
-}

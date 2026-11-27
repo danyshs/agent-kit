@@ -13,7 +13,7 @@ Fill the brief template below once per side.
 
 - **REFERENCES** is one block, pasted unchanged into both briefs, so the comparison is fair. A file added for one side is added for both. It holds:
   - the doc and its git diff since the last approved version, pasted in, not just their paths (the whole doc on a first version). With no git history, hand over a list of the points added and say that you wrote it, since a hand-picked list lets you choose the targets;
-  - the tiger-style principles file, if the `tiger-style-core` plugin is installed (a reviewer can't load skills); otherwise leave that line out;
+  - the tiger-style principles file, if the `tiger-style` plugin is installed (a reviewer can't load skills); otherwise leave that line out;
   - an explicit list of the files the doc cites. The agent reads only those, and ends with the files it needed and didn't have; one re-run with those added is fine. A fixed list misses some findings a free search would catch, but it should spend far fewer turns re-reading what it gathered, and turns are where the cost is. The list is an instruction to the agent, not a permission fence, so check the turn count.
 - Before launching, check that every path you hand over exists (one `ls` of the whole list) and fix or drop any that doesn't: a dead path costs the agent turns hunting for it, or comes back as a bogus finding.
 - **Antagonist:** REFERENCES only. None of your own reasoning: no conversation summary, no list of what you already fixed. If it matters, it belongs in the doc.
@@ -47,7 +47,7 @@ Fill once per side. The REFERENCES block is identical in both briefs.
 <git diff of the doc since the last approved version>
 </diff>
 
-<only if tiger-style-core is installed:>
+<only if the tiger-style plugin is installed:>
 Tiger-style principles file (read it; you can't load skills): <path to its SKILL.md>
 
 Files you may read (read only these; every path was checked to exist):

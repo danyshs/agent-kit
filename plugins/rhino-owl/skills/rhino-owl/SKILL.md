@@ -7,6 +7,25 @@ description: How to run a Rhino-Owl exploration: the launch sheet format, the la
 
 The launcher's path is in the rhino-owl rule; below, `rhino.py` means that path.
 
+## Roles
+
+- **You (the invoking agent):** write the launch sheet, show it to the user as a table, get the
+  budget approved, run the launcher, relay `human-queue.md` requests, and remove the worktrees
+  after the user accepts the Owl's rows.
+- **Rhinos:** at most 4 throwaway runs, each down one direction, almost no planning. **Controls**
+  go down a route expected to be weaker, so comparisons rest on facts. Failures are findings.
+- **Owl:** a fresh run after every rhino has stopped. Writes unnumbered fact, derivation,
+  hypothesis and test rows. It never picks a winner.
+
+## Hard lines
+
+- The launcher is the only way to start a rhino or the Owl. Nothing blocks a bare `claude -p`;
+  don't use one.
+- Rhinos aren't bound by licences or build-blind rules: their code dies with them. Whoever builds
+  from the rows must not have opened a rhino's worktree, except its `human-queue.md`.
+- Devices have no hard fence; "no lasting changes" is prompt text. Device rhinos run only with
+  the user present.
+
 ## The launch sheet
 
 JSON, next to the work (e.g. `rom/<topic>.json`):
