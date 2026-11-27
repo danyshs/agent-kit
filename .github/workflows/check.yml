@@ -31,10 +31,11 @@ jobs:
           brew install fish shellcheck jq
           uv tool install ruff==0.17.6
           uv tool install pyright==1.1.414
-      # one eval test runs the shipped tiger-style suite against an installed copy of the skill
+      # one eval test runs the shipped tiger-style suite against an installed copy of the skill;
+      # it also lists the steering folder, which a fresh runner doesn't have
       - name: Install the tiger-style skill for the evals
         run: |
-          mkdir -p ~/.kiro/skills
+          mkdir -p ~/.kiro/skills ~/.kiro/steering
           cp -R plugins/tiger-style/skills/tiger-style ~/.kiro/skills/
       - name: Lint
         run: ./lint.sh
