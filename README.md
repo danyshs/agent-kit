@@ -10,7 +10,11 @@ Each plugin does one thing. Skim the tables below, note the ones that fit how yo
 
 ## Flagship plugins
 
-The main reasons to use the kit. Each changes how Claude plans, debugs, codes or does a job. ★ = in the Starter pack; "Needs" is blank when there's nothing extra to install.
+The main reasons to use the kit. Each changes how Claude plans, debugs, codes or does a job.
+
+★ = **Star**ter pack: the four plugins marked with it come in one install.
+
+"Needs" is blank when there's nothing extra to install.
 
 ### Evidence and research
 
