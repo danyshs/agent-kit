@@ -21,6 +21,7 @@ from lib.dataset import (
     Rejection,
     Target,
     World,
+    attach_rule_skill,
     discover_world,
     load_cases,
     load_limits,
@@ -168,8 +169,11 @@ def load_suite(root: Path, args: RunArgs, world: World) -> tuple[list[Case], lis
         rules, rejections = load_rules(suite_dir / "rules.json", world, limits)
         rule_ids = frozenset(rule.id for rule in rules)
     cases, case_rejections = load_cases(cases_path, args.suite_kind, rule_ids, world, limits)
+    if args.suite_kind == "steering":
+        cases, sidecar = attach_rule_skill(suite_dir, cases, limits)
+        case_rejections = [*case_rejections, *([] if sidecar is None else [sidecar])]
     assert not (cases and (rejections or case_rejections)), "a rejected file yields no cases"
-    return list(cases), rejections + case_rejections
+    return list(cases), rejections + list(case_rejections)
 
 
 def _error_record(spec: RunSpec, runs_dir: Path, note: str) -> RunRecord:
@@ -228,6 +232,7 @@ def execute_spec(
             files_max=limits.home_files_max,
             plugin=spec.engine == CLAUDE_ENGINE,
             claude_md=spec.engine == CLAUDE_ENGINE and args.rules_claude_md,
+            rule_skill_description=case.rule_skill_description,
         )
         if isinstance(built, str):
             return _error_record(spec, runs_dir, built)

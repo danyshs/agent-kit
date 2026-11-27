@@ -6,13 +6,13 @@ are never the verdict: a crafted run that exits 0 without a summary must FAIL.""
 
 from __future__ import annotations
 
-import sys
+import socket
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
 
-from lib import hidden
+from lib import hidden, sandbox
 from lib.grade import GRADERS, extracted_files
 from lib.hidden import count_tests, is_solution_name, parse_summary, run_hidden_tests
 from lib.run import Event, Verdict
@@ -33,7 +33,7 @@ def write_call(path: str, text: str) -> Event:
     return call("fs_write", {"path": path, "text": text})
 
 
-@unittest.skipUnless(sys.platform == "darwin", "the sandbox is macOS only")
+@unittest.skipUnless(sandbox.backend() is not None, "no sandbox on this machine")
 class RunHiddenTest(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -94,22 +94,28 @@ class RunHiddenTest(unittest.TestCase):
         self.assertIn("timed out", evidence)
 
     def test_network_is_denied_to_the_solution(self) -> None:
-        code = (
-            "import socket\n"
-            "try:\n"
-            "    socket.create_connection(('127.0.0.1', 9), timeout=2)\n"
-            "    REACHED = True\n"
-            "except OSError as err:\n"
-            "    REACHED = isinstance(err, ConnectionRefusedError)\n"
-            "def double(x):\n    assert not REACHED, 'network was reachable'\n    return x * 2\n"
-        )
-        self.assertEqual(self.run_it({"calc.py": code})[0], "PASS")
+        # a live listener outside, so only the sandbox can make the connect fail
+        with socket.socket() as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            port = listener.getsockname()[1]
+            code = (
+                "import socket\n"
+                "try:\n"
+                f"    socket.create_connection(('127.0.0.1', {port}), timeout=2).close()\n"
+                "    REACHED = True\n"
+                "except OSError:\n"
+                "    REACHED = False\n"
+                "def double(x):\n"
+                "    assert not REACHED, 'network was reachable'\n"
+                "    return x * 2\n"
+            )
+            self.assertEqual(self.run_it({"calc.py": code})[0], "PASS")
 
     def test_writes_outside_the_scratch_dir_are_denied(self) -> None:
         target = self.root / "escaped.txt"
         code = (
-            f"try:\n    open({str(target)!r}, 'w').write('x')\nexcept PermissionError:\n    pass\n"
-            + GOOD
+            f"try:\n    open({str(target)!r}, 'w').write('x')\nexcept OSError:\n    pass\n" + GOOD
         )
         self.assertEqual(self.run_it({"calc.py": code})[0], "PASS")
         self.assertFalse(target.exists(), "the sandbox stopped the write")
@@ -135,12 +141,25 @@ class RunHiddenTest(unittest.TestCase):
         self.assertIn("no test functions", evidence)
 
     def test_scratch_dirs_are_cleaned_up(self) -> None:
-        before = len(list(Path(tempfile.gettempdir()).glob("evhidden-*")))
-        self.run_it({"calc.py": GOOD})
-        self.assertEqual(len(list(Path(tempfile.gettempdir()).glob("evhidden-*"))), before)
+        # track the dirs this run made, not a count of the shared temp dir, which another suite
+        # running at the same time can change
+        made: list[Path] = []
+        real_mkdtemp = tempfile.mkdtemp
+
+        def spy(
+            suffix: str | None = None, prefix: str | None = None, directory: str | None = None
+        ) -> str:
+            path = real_mkdtemp(suffix, prefix, directory)
+            made.append(Path(path))
+            return path
+
+        with mock.patch.object(hidden.tempfile, "mkdtemp", side_effect=spy):
+            self.run_it({"calc.py": GOOD})
+        self.assertEqual(len([p for p in made if p.name.startswith("evhidden-")]), 1)
+        self.assertEqual([p for p in made if p.exists()], [])
 
 
-@unittest.skipUnless(sys.platform == "darwin", "the sandbox is macOS only")
+@unittest.skipUnless(sandbox.backend() is not None, "no sandbox on this machine")
 class GraderTest(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()

@@ -1,0 +1,72 @@
+skill/tiger-style model=claude-haiku-5-5 runs=68 ledger_lines=77
+case                       with  without
+rev-fish-planted            0/1      0/1
+rev-lua-planted             0/1      0/1
+rev-py-clean                0/1      0/1
+rev-py-planted              1/1      1/1
+trig-neg-dev-01             1/1        -
+trig-neg-dev-02             1/1        -
+trig-neg-dev-03             1/1        -
+trig-neg-dev-04             1/1        -
+trig-neg-dev-05             1/1        -
+trig-neg-dev-06             1/1        -
+trig-neg-dev-07             1/1        -
+trig-neg-dev-08             1/1        -
+trig-neg-held-01            1/1        -
+trig-neg-held-02            1/1        -
+trig-neg-held-03            1/1        -
+trig-neg-held-04            1/1        -
+trig-neg-held-05            1/1        -
+trig-neg-held-06            1/1        -
+trig-neg-held-07            1/1        -
+trig-neg-held-08            1/1        -
+trig-neg-held2-01           1/1        -
+trig-neg-held2-02           1/1        -
+trig-neg-held2-03           1/1        -
+trig-neg-held2-04           1/1        -
+trig-neg-held2-05           1/1        -
+trig-neg-held2-06           1/1        -
+trig-neg-held2-07           1/1        -
+trig-neg-held2-08           1/1        -
+trig-pos-dev-01               -        -
+trig-pos-dev-02             1/1        -
+trig-pos-dev-03             1/1        -
+trig-pos-dev-04             1/1        -
+trig-pos-dev-05             1/1        -
+trig-pos-dev-06             0/1        -
+trig-pos-dev-07             0/1        -
+trig-pos-dev-08             1/1        -
+trig-pos-held-01            1/1        -
+trig-pos-held-02            1/1        -
+trig-pos-held-03              -        -
+trig-pos-held-04            1/1        -
+trig-pos-held-05            1/1        -
+trig-pos-held-06            0/1        -
+trig-pos-held-07            1/1        -
+trig-pos-held-08            1/1        -
+trig-pos-held2-01           0/1        -
+trig-pos-held2-02           0/1        -
+trig-pos-held2-03           0/1        -
+trig-pos-held2-04           0/1        -
+trig-pos-held2-05           0/1        -
+trig-pos-held2-06           0/1        -
+trig-pos-held2-07           0/1        -
+trig-pos-held2-08           0/1        -
+wr-fish-01                  1/1      0/1
+wr-lua-01                     -      1/1
+wr-py-01                    1/1      1/1
+wr-py-02                      -      0/1
+wr-py-03                    0/1      1/1
+wr-py-04                      -      0/1
+activation loaded/total: trig-pos-dev=5/7 trig-pos-held=6/15 trig-neg-dev=0/8 trig-neg-held=0/16
+review[with]: in-category 9/9 outside 6/6 precision 15/23 severity 13/15 clean-control P0/P1=2 parse_failures=0
+review[without]: in-category 6/9 outside 6/6 precision 12/20 severity 10/12 clean-control P0/P1=2 parse_failures=0
+write[with] PASS/total: length=2/2 assertions=1/2 loops=2/2 units=2/2 pyright=2/2
+write[without] PASS/total: length=4/4 assertions=4/4 loops=4/4 units=3/4 pyright=3/4
+intervals only at n >= 8; none printed below that
+status: contaminated=5 harness_errors=0 aborted=0 credits_latest_runs=0.2539 credits_all_lines=0.2998
+verdict activation: watch
+verdict review-recall: non-discriminating
+verdict review-precision-clean: watch
+verdict write-mechanical: non-discriminating
+report: suite=skill/tiger-style model=claude-haiku-5-5 runs=68 activation=watch review-recall=non-discriminating review-precision-clean=watch write-mechanical=non-discriminating

@@ -1,6 +1,6 @@
 ---
 name: egm-helper
-description: House rules for a design-doc task run with Google's EGM, once the egm-helper rule says a task needs a doc. The doc header, probing before review, what reviewers may see, review limits, and building to the approved spec. Read before drafting.
+description: House rules for a design-doc task run with Google's EGM, once the egm-helper rule says a task needs a doc. The doc header, probing before review, what reviewers may see, review limits, building to the approved spec, and what to do when the user wants to skip the doc. Read before drafting.
 ---
 
 # EGM house rules
@@ -33,5 +33,10 @@ A reviewer gets the doc's path, its persona, and at most a reading list of files
   `Mismatch in <step>. Expected: <what the spec says>. Found: <what the code shows>. Why it matters: <consequence>. Recommended: X, because Y.`
 - A done-check only a human can make (a visual check, a test on a phone) is marked `PENDING-HUMAN (observation: <the one thing to look at>)`. It counts as not done until the user records what they saw. Never use it for a check you could run yourself.
 - Before calling the work done, check whether the code drifted from the doc (EGM's drift report).
+
+## When the user wants to skip the doc
+
+- A short doc is cheap; a wrong build isn't. If the user asks for code on a task the rule says needs a doc, redirect once, plainly. If they insist, comply, and say in one line what is being skipped and the risk. Don't nag.
+- If a session is deep into building something that never had a doc and it's going badly, stop, write the doc from what you know, review it, then resume.
 
 If you also use antagonist-protagonist, its passes run after the review and before approval.

@@ -6,8 +6,8 @@ This copy is generated from my private setup; change things in your fork.
 ## Before you start
 
 - `uv` and Python 3.12 or newer, and `claude` on `PATH`. `kiro-cli` is optional.
-- Each tool's `bin/check` is a fish script and also needs `fish`, `ruff`, `pyright` and `jq` on
-  `PATH`.
+- Each tool's `bin/check` also needs `ruff` and `pyright` on `PATH`. The `bin/` commands are
+  small sh scripts that run the tool's Python through `uv`.
 - Keep both folders side by side: a trajectory test compares its helpers with the evals copy.
 
 ## evals
@@ -37,6 +37,8 @@ one line per run to a ledger under `evals/ledger/` (created on the first run).
   The recordings had home paths, Kiro's system prompt, account rate-limit figures and long file
   bodies replaced before they were committed; the event structure the parsers read is untouched.
   `bin/check` fails on any skipped test.
+- **Sample output.** [`evals/examples/`](evals/examples/README.md) has two recorded ledgers
+  and the reports printed from them, checked against the code by `bin/check`.
 
 ## trajectory
 
@@ -54,7 +56,7 @@ They ship without my ledgers, session logs or private rules. The method doesn't 
 ```mermaid
 flowchart LR
     subgraph EV["tools/evals: controlled tests"]
-        E1["Static checks<br/>free"] --> E2["Cases: fire,<br/>no-fire, pressure"] --> E3["Run in arms: full,<br/>minus-the-rule, none"] --> E4["Code-checked<br/>assertions"] --> E5["Verdict per rule"]
+        E1["Static checks<br/>free"] --> E2["Cases: fire,<br/>no-fire, pressure"] --> E3["Run in arms: full,<br/>minus-the-rule, none,<br/>skill-instead"] --> E4["Code-checked<br/>assertions"] --> E5["Verdict per rule"]
     end
     subgraph TR["tools/trajectory: real sessions"]
         T1["Session logs"] --> T2["Strip all text,<br/>hash arguments"] --> T3["Weekly report +<br/>corrections list"]
@@ -75,9 +77,9 @@ A rule earns its place only if the agent behaves differently with it.
    - **pressure**: the prompt pushes against the rule (the user asks for a heredoc).
 
    Each case lists **assertions**, each a small code check, not a model's opinion: a tool was or wasn't used, the shell command parses as fish, there's no heredoc, nothing outside the project was read, stderr was empty. Graders read the actual tool calls from the session log, not the agent's summary. No evidence fails; "unknown" never passes.
-3. **Arms.** Every case runs in up to three setups, each in a fresh throwaway config folder: **full** (all my rules), **minus-the-rule** (all but the one under test), **none** (no rules). On Claude Code each run is a headless `claude -p` with none of my own settings, rules, hooks or MCP servers: the arm's rules go into a throwaway `CLAUDE.md`, its skills load as a throwaway plugin, and any tool the case doesn't allow is denied. A small test confirmed a rule loaded this way reaches the model and my own rules stay out. A run that loads a skill its arm didn't include is marked contaminated. Runs are pinned to one model and CLI version and capped per run and per suite in wall time and dollars (credits on Kiro). A run over its cap is recorded as aborted, not dropped. A suite prints its worst-case run count and cost first, and refuses to start over budget.
+3. **Arms.** Every case runs in up to four setups, each in a fresh throwaway config folder: **full** (all my rules), **minus-the-rule** (all but the one under test), **none** (no rules), and **skill-instead** (the rule under test leaves the always-on rules and loads as a skill, under the one-line description in the suite's `as_skill.json`). On Claude Code each run is a headless `claude -p` with none of my own settings, rules, hooks or MCP servers: the arm's rules go into a throwaway `CLAUDE.md`, its skills load as a throwaway plugin, and any tool the case doesn't allow is denied. A small test confirmed a rule loaded this way reaches the model and my own rules stay out. A run that loads a skill its arm didn't include is marked contaminated. Runs are pinned to one model and CLI version and capped per run and per suite in wall time and dollars (credits on Kiro). A run over its cap is recorded as aborted, not dropped. A suite prints its worst-case run count and cost first, and refuses to start over budget.
 4. **Scoring.** A run passes when all its hard assertions pass. Per case: pass rate with the rule minus pass rate without it; then the mean of those differences with a bootstrap interval. Only cases that pass in **full** count, so a broken case can't make a rule look useless. Under 8 cases there's no interval, only raw counts. Every run goes into an append-only ledger, and reports are built from the ledger alone.
-5. **Verdicts never say "delete".** No difference gets "watch" or "non-discriminating", since one small suite can't prove a rule is dead. To change a rule: propose one edit, re-run both arms, keep it only if the pass rate holds and cost doesn't rise.
+5. **Verdicts.** A rule whose removal breaks cases is kept. No difference on a few cases gets "watch" or "non-discriminating", since one small suite can't prove a rule is dead. No difference on enough cases is advice: "demote" for a rule over 350 words across 12 or more cases (move the detail to a skill, keep a short pointer), and "prune" across 16 or more (merge it into the rule that covers it, or cut it). A long rule that does change cases still gets "demote" when, across 12 or more cases, it held every one as a skill: it earns its place, but not in every session's context. Cuts go one file at a time with a re-run after each, because two overlapping rules each look useless when removed alone. The thresholds are starting guesses in `limits.json`. To change a rule: propose one edit, re-run both arms, keep it only if the pass rate holds and cost doesn't rise.
 
 **Value tests** ask whether tiger-style makes code better. The agent writes small Python and fish programs; hidden tests it never sees run on the output in a sandbox with no network. It also reviews code with planted bugs, scored on bugs found and false alarms on clean code. Hypotheses and analysis were written down before the first run, so the bar couldn't move after the results.
 
@@ -85,10 +87,10 @@ A rule earns its place only if the agent behaves differently with it.
 
 | Rule | Cases | Result |
 |---|---|---|
-| fish-shell rule | 8 | Changed the answer in 1 case (the user asking for a heredoc). Watch. |
+| fish-shell rule | 8 | Changed the answer in 2 cases (the user asking for a heredoc, and a bash loop to copy verbatim). Watch. |
 | tiger-style-on-branches rule | 8 | 5 cases broken even with all rules on, so only 3 counted. Watch. |
 | tiger-style, value pilot | 4 cases, 24 runs | No difference: every arm passed every hidden test. On review, the one hint was an unbounded fish loop found in 2 of 4 tiger-style runs and 0 of 2 without. A count, not a result. |
-| tiger-style skill, Claude Code (claude-haiku-5-5, CLI 2.1.326, skill at agent-kit c1f8565, 2026-11-20) | 58 cases, 68 runs, $0.29 | Loaded for 11 of 14 prompts with a trigger phrase, 0 of 8 that only named the topic, 0 of 24 that shouldn't load it. Review: 9 of 9 planted bugs of its kind found with the skill, 6 of 9 without, same 2 false alarms on clean code either way. Writing: too few clean runs to compare. 6 runs asked for a language skill their arm didn't include and were left out; the request most likely failed, so they probably weren't a leak. Watch. |
+| tiger-style skill, Claude Code (claude-haiku-5-5, CLI 2.1.326, skill at agent-kit c1f8565, 2026-11-20) | 58 cases, 68 runs, $0.30 | Loaded for 11 of 14 prompts with a trigger phrase, 0 of 8 that only named the topic, 0 of 24 that shouldn't load it. Review: 9 of 9 planted bugs of its kind found with the skill, 6 of 9 without, same 2 false alarms on clean code either way. Writing: too few clean runs to compare. 5 runs asked for a language skill their arm didn't include and were left out; the request most likely failed, so they probably weren't a leak. Watch. |
 
 The tiger-style suite in `tools/evals/skills/tiger-style` runs as shipped. The fish-shell and branch-review suites show how a rule suite is laid out; the rules they test stay private, so they don't run as shipped.
 

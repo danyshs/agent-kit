@@ -11,6 +11,7 @@ from pathlib import Path
 
 from lib.cli import run_static
 from lib.dataset import (
+    AS_SKILL_FILE,
     GRADER_ARGS,
     Arm,
     Case,
@@ -242,6 +243,7 @@ REJECT_CASES: list[tuple[str, dict[str, object], str]] = [
     ("steering arm with", steering_case(arms=["full", "with"]), "steering arms"),
     ("minus manual file", steering_case(arms=["full", "minus-rule-b"]), "not an always-on"),
     ("duplicate arm", steering_case(arms=["full", "full"]), "unique"),
+    ("skill-instead without full", steering_case(arms=["none", "skill-instead"]), "steering arms"),
     ("unknown extra skill", steering_case(extra_skills=["ghost"]), "extra_skills"),
     ("unknown extra steering", steering_case(extra_steering=["ghost"]), "extra_steering"),
     ("repeats too many", steering_case(repeats=6), "repeats"),
@@ -555,6 +557,70 @@ class CoverageTest(TreeTest):
         )
         self.assertEqual(self.rows()[("tool_group", "shell")], "covered")
         self.assertEqual(self.rows()[("tool_group", "network")], "uncovered")
+
+
+class RuleAsSkillTest(TreeTest):
+    """Goal: a skill-instead arm loads only with a well-formed as_skill.json beside its cases, and
+    the description reaches only the cases that use the arm. Method: one suite, a sidecar per
+    subtest; read the dataset's rejections."""
+
+    def load_with(self, sidecar: object | None) -> Dataset:
+        cases = [steering_case(arms=["full", "skill-instead"]), steering_case("c2")]
+        suite = self.write_steering(cases).parent
+        (suite / AS_SKILL_FILE).unlink(missing_ok=True)
+        if sidecar is not None:
+            write_json(suite / AS_SKILL_FILE, sidecar)
+        return self.dataset()
+
+    def test_a_good_sidecar_reaches_only_the_skill_instead_cases(self) -> None:
+        data = self.load_with({"description": "Use when writing a status line."})
+        self.assertEqual(data.rejections, ())
+        by_id = {case.id: case for case in data.cases}
+        self.assertEqual(by_id["c1"].rule_skill_description, "Use when writing a status line.")
+        self.assertEqual(by_id["c1"].arms[1], Arm("skill-instead", None))
+        self.assertIsNone(by_id["c2"].rule_skill_description)
+
+    def test_the_description_bound_is_inclusive(self) -> None:
+        at_max = "x" * self.limits.description_chars_max
+        self.assertEqual(self.load_with({"description": at_max}).rejections, ())
+
+    def test_a_missing_or_bad_sidecar_rejects_the_suite(self) -> None:
+        too_long = "x" * (self.limits.description_chars_max + 1)
+        bad: dict[str, tuple[object | None, str]] = {
+            "missing": (None, f"needs {AS_SKILL_FILE}"),
+            "not an object": (["Use when"], "must be"),
+            "extra key": ({"description": "Use when", "name": "x"}, "must be"),
+            "empty": ({"description": ""}, "must be"),
+            "not text": ({"description": 7}, "must be"),
+            "too long": ({"description": too_long}, "chars >"),
+            "two lines": ({"description": "one\ntwo"}, "one line"),
+            "a quote": ({"description": 'say "hi"'}, "one line"),
+            "a backslash": ({"description": "a\\b"}, "one line"),
+        }
+        for label, (sidecar, expected) in bad.items():
+            with self.subTest(label):
+                data = self.load_with(sidecar)
+                self.assertEqual(data.cases, ())
+                self.assertIn(expected, " ".join(r.reason for r in data.rejections))
+
+    def test_a_sidecar_that_is_not_json_rejects_the_suite(self) -> None:
+        suite = self.write_steering([steering_case(arms=["full", "skill-instead"])]).parent
+        (suite / AS_SKILL_FILE).write_text("{", encoding="utf-8")
+        data = self.dataset()
+        self.assertEqual(data.cases, ())
+        self.assertIn(f"needs {AS_SKILL_FILE}", data.rejections[0].reason)
+
+    def test_a_suite_without_the_arm_needs_no_sidecar(self) -> None:
+        self.write_steering([steering_case()])
+        data = self.dataset()
+        self.assertEqual(data.rejections, ())
+        self.assertIsNone(data.cases[0].rule_skill_description)
+
+    def test_skill_instead_fits_only_an_always_on_rule(self) -> None:
+        path = self.root / "steering" / "rule-b" / "cases.json"
+        write_json(path, [steering_case(target="rule-b", arms=["full", "skill-instead"])])
+        _, rejections = load_cases(path, "steering", frozenset({"r1"}), self.world, self.limits)
+        self.assertIn("fits only an always-on", " ".join(r.reason for r in rejections))
 
 
 if __name__ == "__main__":

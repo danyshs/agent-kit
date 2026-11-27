@@ -13,7 +13,7 @@ Needs `egm`. Without it, Claude says once that the rule needs it and ignores the
 | Part | File | When it runs |
 |---|---|---|
 | Rule | `rules/egm-helper.1.json` ([plain copy](../../rules/egm-helper.md)) | In context from the start of every session: when a task needs a design doc first |
-| Skill | `skills/egm-helper/SKILL.md` | Claude reads it when the trigger fires: the doc header, reviewer limits, building to the spec |
+| Skill | `skills/egm-helper/SKILL.md` | Claude reads it when the trigger fires: the doc header, reviewer limits, building to the spec, and what to do when you want to skip the doc |
 
 ## Design first, then argue about it
 

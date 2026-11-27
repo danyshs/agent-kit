@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Final, cast
 
@@ -27,7 +27,10 @@ ROLES: Final = ("fire", "no_fire", "pressure")
 CASE_TIERS: Final = ("smoke", "standard", "deep")
 TAGS: Final = ("capability", "regression")
 SKILL_ARMS: Final = ("with", "without", "previous", "none")
-STEERING_ARMS: Final = ("full", "none")
+STEERING_ARMS: Final = ("full", "none", "skill-instead")
+SKILL_INSTEAD_ARM: Final = "skill-instead"  # the target rule leaves the rules and loads as a skill
+# a steering suite that uses skill-instead names the skill's description here: {"description": ...}
+AS_SKILL_FILE: Final = "as_skill.json"
 MINUS_PREFIX: Final = "minus-"
 TARGET_KINDS: Final = ("skill", "steering", "tool_group")
 HUMAN_GRADER: Final = "human"
@@ -94,7 +97,7 @@ class Limits:
 
 @dataclass(frozen=True)
 class Arm:
-    kind: str  # with | without | previous | none | full | minus
+    kind: str  # with | without | previous | none | full | minus | skill-instead
     minus_file: str | None  # set iff kind == "minus"
 
 
@@ -125,6 +128,7 @@ class Case:
     tags: tuple[str, ...]
     tier: str | None
     assertions: tuple[Assertion, ...]
+    rule_skill_description: str | None = None  # set iff an arm is skill-instead (as_skill.json)
 
 
 @dataclass(frozen=True)
@@ -680,7 +684,8 @@ def _parse_assertions(raw: object, world: World, limits: Limits) -> tuple[Assert
 
 
 def parse_arm(text: str, world: World) -> Arm | str:
-    """'with' | 'without' | 'previous' | 'none' | 'full' | 'minus-<always-on file>'."""
+    """'with' | 'without' | 'previous' | 'none' | 'full' | 'minus-<always-on file>' |
+    'skill-instead'."""
     assert text, "arm text must be non-empty"
     assert world.always_on_names <= world.steering_names, "always-on files are steering files"
     if text.startswith(MINUS_PREFIX):
@@ -712,8 +717,11 @@ def _check_arms(raw: object, target_kind: str, target: str, world: World) -> tup
     elif target_kind == "skill":
         if not kinds <= set(SKILL_ARMS) or "with" not in kinds:
             return "skill arms must be a subset of with/without/previous/none including with"
-    elif not kinds <= {"full", "none", "minus"} or "full" not in kinds or len(arms) < 2:
-        return "steering arms must include full and one other of none/minus-<file>"
+    elif not kinds <= {*STEERING_ARMS, "minus"} or "full" not in kinds or len(arms) < 2:
+        return "steering arms must include full and one other of none/minus-<file>/skill-instead"
+    if SKILL_INSTEAD_ARM in kinds:
+        if target_kind != "steering" or target not in world.always_on_names:
+            return f"arm {SKILL_INSTEAD_ARM!r} fits only an always-on steering target"
     assert len(arms) == len(texts), "one Arm per text"
     return tuple(arms)
 
@@ -1035,6 +1043,48 @@ def _parse_rule(raw: object, suite_name: str, seen_ids: set[str], world: World) 
 # ---------------------------------------------------------------- dataset
 
 
+def _uses_rule_skill(case: Case) -> bool:
+    return any(arm.kind == SKILL_INSTEAD_ARM for arm in case.arms)
+
+
+def _rule_skill_description(path: Path, limits: Limits) -> tuple[str | None, str | None]:
+    """(description, None) or (None, reason). One line with no quote or backslash, so the
+    SKILL.md the arm writes needs no escaping."""
+    assert limits.description_chars_max > 0, "description bound is positive"
+    try:
+        value: object = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as err:
+        return None, f"a skill-instead arm needs {AS_SKILL_FILE}: {err}"
+    raw = cast(dict[str, object], value) if isinstance(value, dict) else {}
+    description = raw.get("description")
+    if set(raw) != {"description"} or not isinstance(description, str) or not description:
+        return None, f'{AS_SKILL_FILE} must be {{"description": "<non-empty text>"}}'
+    if len(description) > limits.description_chars_max:
+        return None, f"description: {len(description)} chars > {limits.description_chars_max}"
+    if any(ch in description for ch in '\r\n"\\'):
+        return None, "description: one line, no double quote or backslash"
+    assert description and len(description) <= limits.description_chars_max, "checked above"
+    return description, None
+
+
+def attach_rule_skill(
+    suite_dir: Path, cases: tuple[Case, ...], limits: Limits
+) -> tuple[tuple[Case, ...], Rejection | None]:
+    """Give a steering suite's skill-instead cases the description in as_skill.json; no cases
+    and a rejection when they need one and it is missing or bad. Both suite loaders call this."""
+    if not any(_uses_rule_skill(c) for c in cases):
+        return cases, None
+    description, reason = _rule_skill_description(suite_dir / AS_SKILL_FILE, limits)
+    if reason is not None:
+        return (), Rejection(str(suite_dir / AS_SKILL_FILE), None, reason)
+    assert description is not None, "no reason means a description"
+    attached = tuple(
+        replace(c, rule_skill_description=description) if _uses_rule_skill(c) else c for c in cases
+    )
+    assert len(attached) == len(cases), "one case out per case in"
+    return attached, None
+
+
 def load_dataset(world: World, limits: Limits) -> Dataset:
     """Loads rules.json and cases.json of every suite dir; a bad file rejects its suite."""
     assert limits.targets_per_kind_max > 0, "suite bound is positive"
@@ -1088,6 +1138,10 @@ def _load_suite(
         rule_ids = frozenset(rule.id for rule in rules)
         cases, case_rejections = load_cases(cases_path, suite_kind, rule_ids, world, limits)
         rejections += case_rejections
+    if suite_kind == "steering":
+        cases, sidecar = attach_rule_skill(suite_dir, cases, limits)
+        if sidecar is not None:
+            rejections.append(sidecar)
     clashes = [c.id for c in cases if c.id in seen_ids]
     if clashes:
         reason = f"case id {clashes[0]!r} already used in {seen_ids[clashes[0]]}"

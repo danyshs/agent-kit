@@ -1,6 +1,6 @@
 {
   "name": "agent-orchestration",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "When to use sub-agents and when not to, how to brief them, and how to keep context small.",
   "author": {
     "name": "danyshs"

@@ -1,6 +1,6 @@
 {
   "name": "pre-push",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A git hook that asks you to confirm a code review ran before a branch's first push, plus the rule that tells Claude how to pass it.",
   "author": {
     "name": "danyshs"

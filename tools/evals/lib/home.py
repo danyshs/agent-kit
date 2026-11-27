@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
 
-from lib.dataset import VALUE_ARMS, VALUE_SKILL, Arm, Target
+from lib.dataset import FENCE_LINE, SKILL_INSTEAD_ARM, VALUE_ARMS, VALUE_SKILL, Arm, Target
 
 SKILL_FILE: Final = "SKILL.md"
 VALUE_RULE: Final = "tiger-style-on-branches"  # the always-on rule the skill+rule arm adds
@@ -24,7 +24,7 @@ PLUGIN_MANIFEST: Final = Path(".claude-plugin") / "plugin.json"
 PLUGIN_NAME: Final = "eval-arm"
 CLAUDE_MD: Final = "CLAUDE.md"  # present: rules load as memory (--add-dir); absent: system prompt
 SKILL_ARMS: Final = ("with", "without", "previous")
-STEERING_ARMS: Final = ("full", "minus")
+STEERING_ARMS: Final = ("full", "minus", SKILL_INSTEAD_ARM)
 
 
 @dataclass(frozen=True)
@@ -38,6 +38,7 @@ class HomePlan:
     skills: tuple[str, ...]  # skill dir names copied from the source home
     steering: tuple[str, ...]  # steering file stems copied from the source home
     snapshot_skill: str | None  # skill whose dir comes from the snapshot, not the source home
+    rule_skill: str | None = None  # skill-instead: this steering file is written as a skill
 
 
 def _plan_value_home(
@@ -86,7 +87,15 @@ def plan_home(
         assert arm.minus_file is not None, "a minus arm names its file"
         steering.discard(arm.minus_file)
     assert arm.kind != "full" or always_on <= steering, "full keeps every always-on file"
-    return HomePlan(tuple(sorted(set(extra_skills))), tuple(sorted(steering)), None)
+    skills = tuple(sorted(set(extra_skills)))
+    if arm.kind != SKILL_INSTEAD_ARM:
+        return HomePlan(skills, tuple(sorted(steering)), None)
+    if target.kind != "steering" or target.name not in steering:
+        return f"arm {arm.kind!r} needs a steering target the full arm loads"
+    if target.name in skills:
+        return f"arm {arm.kind!r}: a skill named {target.name!r} is already in the home"
+    steering.discard(target.name)
+    return HomePlan(skills, tuple(sorted(steering)), None, rule_skill=target.name)
 
 
 def _files_under(root: Path, files_max: int) -> list[Path] | None:
@@ -155,6 +164,35 @@ def _populate(
     return None
 
 
+def _skill_text(name: str, description: str, rule_text: str) -> str:
+    """A SKILL.md holding the rule's text verbatim; a Kiro rule's own frontmatter is dropped."""
+    assert name and description and "\n" not in description, "one-line description"
+    lines = rule_text.split("\n")
+    body = rule_text
+    if lines[0].strip() == FENCE_LINE:
+        closing = [i for i, line in enumerate(lines[1:], start=1) if line.strip() == FENCE_LINE]
+        body = "\n".join(lines[closing[0] + 1 :]).lstrip("\n") if closing else rule_text
+    text = f'---\nname: {name}\ndescription: "{description}"\n---\n\n{body}'
+    assert text.startswith(f"---\nname: {name}\n"), "frontmatter first"
+    return text
+
+
+def _write_rule_skill(src_home: Path, dest: Path, name: str, description: str | None) -> str | None:
+    """skill-instead: the steering file as skills/<name>/SKILL.md; a str is why it could not be."""
+    assert dest.is_dir() and name, "dest exists and the rule has a name"
+    if not description:
+        return f"arm {SKILL_INSTEAD_ARM!r} needs a skill description for {name!r}"
+    src_file = src_home / "steering" / f"{name}.md"
+    if not src_file.is_file():
+        return f"steering file {src_file} does not exist"
+    skill_dir = dest / "skills" / name
+    assert not skill_dir.exists(), "plan_home keeps the name out of the copied skills"
+    skill_dir.mkdir(parents=True)
+    text = _skill_text(name, description, src_file.read_text(encoding="utf-8"))
+    (skill_dir / SKILL_FILE).write_text(text, encoding="utf-8")
+    return None
+
+
 def _write_claude_md(dest: Path, steering: tuple[str, ...]) -> None:
     """A CLAUDE.md holding the arm's steering text. Real use imports the files (@path), but an
     import in an --add-dir CLAUDE.md is not expanded (probe, 2026-11-20): the text goes inline."""
@@ -177,6 +215,7 @@ def build_home(
     files_max: int,
     plugin: bool = False,
     claude_md: bool = False,
+    rule_skill_description: str | None = None,
 ) -> HomeDir | str:
     """Fill the empty dir `dest` for this arm; a str is the reason it could not be built."""
     assert dest.is_dir() and not any(dest.iterdir()), "dest must be an empty directory"
@@ -187,6 +226,8 @@ def build_home(
     if plan.snapshot_skill and snapshot_dir is None:
         return "the previous arm needs a snapshot dir"
     problem = _populate(plan, src_home, snapshot_dir, dest, files_max)
+    if not problem and plan.rule_skill:
+        problem = _write_rule_skill(src_home, dest, plan.rule_skill, rule_skill_description)
     if problem:
         return problem
     if plugin:

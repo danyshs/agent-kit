@@ -1,6 +1,6 @@
 {
   "name": "when-to-ask",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "When the agent should just do it and when it should ask: recommend-and-proceed, one done-gate, lead with the decision.",
   "author": {
     "name": "danyshs"

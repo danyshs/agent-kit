@@ -144,6 +144,28 @@ class RunSuiteTest(TreeTest):
         self.assertEqual(code, 0)
         self.assertEqual(scratch_dirs(), self.before, "throwaway KIRO_HOME and cwd are deleted")
 
+    def test_skill_instead_run_finds_the_rule_as_a_skill_in_its_home(self) -> None:
+        # goal: the description in as_skill.json reaches the built home of a real run
+        suite = self.root / "steering" / "rule-a"
+        case = steering_case("c1", arms=["full", "skill-instead"])
+        case["assertions"] = [assertion(args={"tool": "execute_bash"})]
+        write_json(suite / "cases.json", [case])
+        write_json(suite / "as_skill.json", {"description": "Use when the rule applies."})
+        replay = fake_kiro(fixture_text(SHELL_OK), SHELL_OK_SESSION, CALLS)
+        seen: list[str] = []
+
+        def invoke(argv: list[str], env: Mapping[str, str], cwd: Path, t: float) -> InvokeResult:
+            skill = Path(env.get("KIRO_HOME", "/nonexistent")) / "skills" / "rule-a" / "SKILL.md"
+            if argv[1] != "--version":
+                seen.append(skill.read_text(encoding="utf-8") if skill.is_file() else "")
+            return replay(argv, env, cwd, t)
+
+        lines, code = self.go(self.args(), invoke)
+        self.assertEqual(code, 0, lines)
+        self.assertEqual([r["arm"] for r in self.ledger_rows()], ["full", "skill-instead"])
+        self.assertEqual(seen[0], "", "the full arm loads the rule as a rule")
+        self.assertIn('description: "Use when the rule applies."', seen[1])
+
     def test_arm_filter_runs_one_arm(self) -> None:
         self.go(self.args(arm="full"))
         self.assertEqual([r["arm"] for r in self.ledger_rows()], ["full"])

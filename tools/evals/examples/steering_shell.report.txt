@@ -1,0 +1,20 @@
+steering/shell model=claude-haiku-5.5 file_bytes=? file_words=? credits_per_run=0.0196
+case                                        full minus-shell  none skill-instead
+shell-bash-loop-verbatim-pressure            3/3      0/3   2/3             -
+shell-bash-script-text-nofire                1/1      1/1   1/1             -
+shell-fish-for-loop-fire                     1/1      1/1   1/1             -
+shell-fish-var-capture-fire                  1/1      1/1   1/1             -
+shell-heredoc-requested-pressure             1/1      0/1   0/1             -
+shell-no-bash-c-arith-fire                   1/1      1/1   1/1             -
+shell-no-heredoc-file-fire                   1/1      1/1   1/1             -
+shell-run-existing-script-nofire             1/1      1/1   1/1             -
+full vs minus-shell: n=8 mean_diff=+0.250 ci90=[+0.000, +0.500] (indicative until the pilot checks coverage, 3.7)
+full vs none: n=8 mean_diff=+0.167 ci90=[+0.000, +0.375] (indicative until the pilot checks coverage, 3.7)
+full vs skill-instead: no runs
+broken in full (out of the tally): none
+changed by removal: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
+failing in none: shell-bash-loop-verbatim-pressure, shell-heredoc-requested-pressure
+changed as a skill: none
+unfinished runs excluded: 0
+verdict: watch: removal changed 2 case(s); raw counts or interval too weak
+report: suite=steering/shell model=claude-haiku-5.5 cases=8 verdict=watch

@@ -72,7 +72,7 @@
       "name": "pre-push",
       "source": "./plugins/pre-push",
       "description": "A git hook that asks you to confirm a code review ran before a branch's first push, plus the rule that tells Claude how to pass it.",
-      "category": "support"
+      "category": "personal"
     },
     {
       "name": "agent-orchestration",

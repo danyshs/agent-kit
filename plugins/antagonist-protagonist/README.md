@@ -10,8 +10,8 @@ Works with or without [`egm-helper`](../egm-helper/README.md); with it, these pa
 
 | Part | File | When it runs |
 |---|---|---|
-| Rule | `rules/antagonist-protagonist.1.json` ([plain copy](../../rules/antagonist-protagonist.md)) | In context from the start of every session: when the passes run, in what order, and who decides |
-| Skill | `skills/antagonist-protagonist/SKILL.md` | Claude reads it before launching either reviewer: the brief template, the final table and the report |
+| Rule | `rules/antagonist-protagonist.1.json` ([plain copy](../../rules/antagonist-protagonist.md)) | In context from the start of every session: what the passes are, when they run, and when to read the skill |
+| Skill | `skills/antagonist-protagonist/SKILL.md` | Claude reads it before launching either reviewer: the order, the brief template, who decides, the final table and the report |
 | Agent | `agents/antagonist.md` | Read-only. Asks whether this should be done at all, or this way |
 | Agent | `agents/protagonist.md` | Read-only. Gets the same references, the antagonist's points and Claude's answer to each, and argues the original position from the code, or says "this pushback is right" |
 

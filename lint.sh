@@ -31,18 +31,7 @@ check() {
   fi
 }
 
-# fish has no linter; parse-check and format-check every file
-# shellcheck disable=SC2329  # called by name through check below
-fish_all() {
-  local f bad=0
-  for f in "$@"; do
-    fish --no-execute "$f" || bad=1
-    fish_indent --check "$f" || { echo "not fish_indent-clean: $f"; bad=1; }
-  done
-  return "$bad"
-}
-
-for tool in ruff pyright shellcheck fish fish_indent uvx; do
+for tool in ruff pyright shellcheck uvx; do
   command -v "$tool" >/dev/null 2>&1 || { echo "lint: missing $tool"; exit 1; }
 done
 
@@ -86,12 +75,13 @@ copies_match() {
 }
 check "copies match" "${#copies[@]}" copies_match
 
-fi=()
-while IFS= read -r f; do
-  head -n 1 "$f" | grep -Eq '^#!/usr/bin/env fish' && fi+=("$f")
-done < <(files)
-while IFS= read -r f; do fi+=("$f"); done < <(files '*.fish')
-check fish "${#fi[@]}" fish_all "${fi[@]}"
+# every plugin's rule loads in every session at once; detail belongs in a skill
+RULE_WORDS_MAX=1500
+rules=()
+while IFS= read -r f; do rules+=("$f"); done < <(files 'rules/*.md')
+words=0
+[ "${#rules[@]}" -gt 0 ] && words=$(cat "${rules[@]}" | wc -w | tr -d ' ')
+check "rule words, $words of $RULE_WORDS_MAX" "${#rules[@]}" test "$words" -le "$RULE_WORDS_MAX"
 
 # workflow files: actionlint also runs shellcheck on each run: block
 wf=()

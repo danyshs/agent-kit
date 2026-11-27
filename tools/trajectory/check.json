@@ -1,0 +1,8 @@
+{
+  "why": "Floors: raise them when files or tests are added, never lower them. No test may skip.",
+  "py_files_min": 27,
+  "typed_files_min": 27,
+  "tests_min": 228,
+  "skipped_max": 0,
+  "skip_reason": null
+}

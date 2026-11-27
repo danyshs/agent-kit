@@ -1,7 +1,9 @@
 """PreToolUse guards for Claude Code.
 
 guard.py agent  -> on Agent calls: model ceiling, then the user's budget (typed, or a
-                   proposal the user approved).
+                   proposal the user approved, else a $10 default). Each allowed launch
+                   holds its floor in <session>/guard-launches.jsonl until its sub-agent
+                   replies, so launches in one message can't all pass on the same spend.
 guard.py turn   -> on every main-agent call: the turn cap (10M tokens by default).
 
 Exit 0 allows, exit 2 refuses with one stderr line. The hooks.json wrapper turns any
@@ -11,15 +13,18 @@ Standard library only; runs on python 3.9.
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import datetime
+import fcntl
 import json
 import re
 import sys
-from collections.abc import Iterator
+import time
+from collections.abc import Generator, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import BinaryIO, cast
 
 MEGABYTE = 1024 * 1024
 MAIN_BYTES_MAX = 128 * MEGABYTE  # real sessions stay well under this
@@ -46,6 +51,13 @@ VETO_PATTERN = re.compile(
 )
 APPROVAL_CHARS_MAX = 120  # real approvals are a few words
 PROPOSAL_DOLLARS_MAX = 20.0  # over this the user types the line; a "yes" is too cheap for it
+DEFAULT_BUDGET_DOLLARS = 10.0  # no line and no approval still stops a runaway fan-out
+LEDGER_NAME = "guard-launches.jsonl"
+HOLD_SECONDS_MAX = 600  # a hold no reply has answered by then was a launch that never ran
+HOLDS_MAX = 64  # more launches than this in HOLD_SECONDS_MAX is a loop, not a fan-out
+LOCK_TRIES_MAX = 100
+LOCK_POLL_SECONDS = 0.02  # 100 tries: 2 s of the hook's 10 s timeout
+EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
 TURN_CAP_PATTERN = re.compile(r"turn\s+cap\s+(\d{1,3}m|off)", re.IGNORECASE)
 SYNTHETIC_MODEL = "<synthetic>"
 
@@ -472,6 +484,7 @@ class Budget:
     since: datetime.datetime | None
     approved: bool = False  # from approved proposals, not a typed line
     ignored: int = 0  # approved proposals newer than the typed line, which don't count
+    default: bool = False  # DEFAULT_BUDGET_DOLLARS: no line and no approved proposal
 
 
 def proposal_dollars(text: str) -> float | None:
@@ -600,12 +613,15 @@ class Spend:
     files: int
     messages: int
     unpriced: int
+    first_replies: tuple[datetime.datetime, ...] = ()  # one per sub-agent that has replied
 
 
 def spend_usd(paths: list[Path], since: datetime.datetime, prices: Prices) -> Spend:
     records: list[Record] = []
+    first_replies: list[datetime.datetime] = []
     for path in paths:
         raws = [raw for raw in path.read_bytes().split(b"\n") if raw]
+        first: datetime.datetime | None = None
         for index, raw in enumerate(raws):
             if b'"assistant"' not in raw:
                 continue
@@ -613,8 +629,12 @@ def spend_usd(paths: list[Path], since: datetime.datetime, prices: Prices) -> Sp
             # api-request-blob lines mention "assistant" and carry no timestamp
             if record is None or record.get("type") != "assistant":
                 continue
-            if timestamp_of(record) >= since:
+            stamp = timestamp_of(record)
+            first = stamp if first is None else min(first, stamp)
+            if stamp >= since:
                 records.append(record)
+        if first is not None and path.parent.name == "subagents":  # rhinos never hold
+            first_replies.append(first)
     dollars = 0.0
     unpriced = 0
     usages = dedup_usage(records)
@@ -631,7 +651,106 @@ def spend_usd(paths: list[Path], since: datetime.datetime, prices: Prices) -> Sp
             + usage.output_tokens * rates["out"]
         ) / TOKENS_PER_MILLION
     assert dollars >= 0, dollars
-    return Spend(dollars, len(paths), len(usages), unpriced)
+    return Spend(dollars, len(paths), len(usages), unpriced, tuple(sorted(first_replies)))
+
+
+# -- launch holds: launches in one message all read the spend from before any of them ran
+
+
+@dataclass(frozen=True)
+class Hold:
+    at: datetime.datetime
+    dollars: float
+
+
+@contextlib.contextmanager
+def locked(path: Path) -> Generator[BinaryIO, None, None]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a+b") as handle:  # the lock goes when the file closes, even on a crash
+        for _ in range(LOCK_TRIES_MAX):
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                time.sleep(LOCK_POLL_SECONDS)
+        else:
+            raise Refusal(f"refused: {path} stayed locked; fix: retry the launch")
+        yield handle
+
+
+def read_holds(handle: BinaryIO, path: Path) -> list[Hold]:
+    handle.seek(0)
+    data = handle.read(BLOCK_BYTES + 1)
+    try:
+        if len(data) > BLOCK_BYTES:
+            raise ValueError("over 1 MB")
+        raws = [raw for raw in data.split(b"\n") if raw]
+        holds: list[Hold] = []
+        for index, raw in enumerate(raws):
+            record = parse_line(raw, index == len(raws) - 1)
+            if record is None:
+                continue  # a hook killed mid-write; that hold is lost, the rest stand
+            dollars = record.get("dollars")
+            if isinstance(dollars, bool) or not isinstance(dollars, (int, float)) or dollars < 0:
+                raise ValueError(f"line {index + 1} has no dollars")
+            holds.append(Hold(timestamp_of(record), float(dollars)))
+    except (ValueError, TypeError) as error:
+        raise Refusal(f"refused: {path} unreadable: {error}; fix: delete it") from error
+    return holds
+
+
+def open_holds(holds: list[Hold], replies: tuple[datetime.datetime, ...]) -> list[Hold]:
+    """Holds no sub-agent reply has answered: each reply answers the oldest hold before it."""
+    waiting = sorted(holds, key=lambda hold: hold.at)
+    for reply in sorted(replies):
+        if waiting and waiting[0].at <= reply:
+            waiting.pop(0)
+    assert len(waiting) <= len(holds), (waiting, holds)
+    return waiting
+
+
+def hold_launch(main_path: Path, spend: Spend, floor: float, budget: Budget) -> float:
+    """Refuse when spend, open holds and this floor pass the budget; else hold the floor.
+    Returns the dollars other launches hold."""
+    assert budget.dollars is not None and budget.since is not None, budget
+    path = main_path.with_suffix("") / LEDGER_NAME
+    now = datetime.datetime.now(datetime.timezone.utc)
+    with locked(path) as handle:
+        recent = [
+            hold
+            for hold in read_holds(handle, path)
+            if (now - hold.at).total_seconds() < HOLD_SECONDS_MAX
+        ]
+        waiting = open_holds(recent, spend.first_replies)
+        held = sum(hold.dollars for hold in waiting if hold.at >= budget.since)
+        if len(waiting) >= HOLDS_MAX:
+            raise Refusal(
+                f"refused: {len(waiting)} launches in {HOLD_SECONDS_MAX // 60} minutes with no"
+                f" reply yet; fix: wait for them, or delete {path}"
+            )
+        if spend.dollars + held + floor > budget.dollars:
+            fix = (
+                "end a reply with 'proposed budget $N' for the user to approve, or the user"
+                " types 'budget $N'"
+                if budget.default
+                else "user types a higher 'budget $N' line"
+            )
+            raise Refusal(
+                f"refused: spend ${spend.dollars:.2f} + ${held:.2f} held by launches not yet"
+                f" replying + launch floor ${floor:.2f} is over the budget; spent"
+                f" ${spend.dollars:.2f} of ${budget.dollars:.2f}; fix: {fix}"
+            )
+        kept = [*waiting, Hold(now, floor)]
+        handle.seek(0)
+        handle.truncate()
+        handle.write(b"".join(hold_line(hold) for hold in kept))
+        handle.flush()
+    return held
+
+
+def hold_line(hold: Hold) -> bytes:
+    record = {"timestamp": hold.at.isoformat(), "dollars": round(hold.dollars, 6)}
+    return json.dumps(record).encode() + b"\n"
 
 
 def run_agent(hook_input: Record) -> str:
@@ -650,19 +769,23 @@ def run_agent(hook_input: Record) -> str:
     if budget.off:
         return f"guard: budget off; {note}"
     if budget.dollars is None or budget.since is None:
-        return f"guard: no budget line; {note}"
+        budget = Budget(DEFAULT_BUDGET_DOLLARS, False, EPOCH, default=True)
+    assert budget.since is not None, budget
     spend = spend_usd(subagent_files(main_path), budget.since, prices)
     floor = floor_usd(launch.rates, prices)
-    if spend.dollars + floor > budget.dollars:
-        raise Refusal(
-            f"refused: spend ${spend.dollars:.2f} + launch floor ${floor:.2f} is over the budget;"
-            f" spent ${spend.dollars:.2f} of ${budget.dollars:.2f}; fix: user types a higher"
-            f" 'budget $N' line; {note}"
-        )
+    try:
+        held = hold_launch(main_path, spend, floor, budget)
+    except Refusal as refusal:
+        raise Refusal(f"{refusal}; {note}") from refusal
+    if budget.default:
+        since = f"session start (no budget line: default ${DEFAULT_BUDGET_DOLLARS:.2f})"
+    elif budget.approved:
+        since = "first approved proposal"
+    else:
+        since = "budget line"
     return (
-        f"guard: ${spend.dollars:.2f} of ${budget.dollars:.2f} since"
-        f" {'first approved proposal' if budget.approved else 'budget line'},"
-        f" {spend.files} files, {spend.messages} messages, {spend.unpriced} unpriced; {note}"
+        f"guard: ${spend.dollars:.2f} of ${budget.dollars:.2f} since {since}, {spend.files}"
+        f" files, {spend.messages} messages, {spend.unpriced} unpriced, ${held:.2f} held; {note}"
     )
 
 

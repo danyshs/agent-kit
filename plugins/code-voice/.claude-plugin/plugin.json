@@ -1,6 +1,6 @@
 {
   "name": "code-voice",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "One engineer's taste in comments and code: terse, explains why, no class hierarchies by default. Keep it only if it fits you.",
   "author": {
     "name": "danyshs"

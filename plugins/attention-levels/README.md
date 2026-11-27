@@ -10,7 +10,8 @@ Needs python3. Without it the hook warns and the level stays Medium.
 
 | Part | File | When it runs |
 |---|---|---|
-| Rule | `rules/attention-levels.1.json` ([plain copy](../../rules/attention-levels.md)) | In context from the start of every session: how many questions to ask at each level |
+| Rule | `rules/attention-levels.1.json` ([plain copy](../../rules/attention-levels.md)) | In context from the start of every session: how the level is set, and what Claude asks about at every level |
+| Skill | `skills/attention-levels/SKILL.md` | Claude reads it when the level is Low or High: the table of what it asks at each level, and how to log decisions at Low |
 | Claude Code hook | `scripts/attention.py` | On every message you send: reads the level you typed and adds a line like `Attention level: Low` |
 | Helper script | `scripts/lowlog.py` | When Claude, at Low, makes a call it would otherwise have asked you about, it logs it |
 

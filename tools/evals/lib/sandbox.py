@@ -1,10 +1,13 @@
 """Throwaway sandbox for running model-written code (design 3.6, step 5).
 
 The model never executes anything (release 1 trusts read_file only); this module runs code the
-model *attempted* to write, after the fact, as the user. Isolation is macOS sandbox-exec plus a
-scrubbed env, rlimits, a wall timeout and a process-group kill. It fails closed: a missing
-sandbox, or a canary that does not see network and write attempts denied, means nothing runs.
-What it does not cover is listed in design 3.6; do not claim more than that list.
+model *attempted* to write, after the fact, as the user. Isolation is sandbox-exec on macOS or
+bwrap on Linux, plus a scrubbed env, rlimits, a wall timeout and a process-group kill. It fails
+closed: a missing sandbox, or a canary that does not see network and write attempts denied, means
+nothing runs. What it does not cover is listed in design 3.6; do not claim more than that list.
+
+bwrap needs unprivileged user namespaces. Ubuntu 23.10 and later block them through AppArmor unless
+`kernel.apparmor_restrict_unprivileged_userns=0`; the canary then fails and says why.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ from __future__ import annotations
 import os
 import resource
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -20,35 +24,45 @@ from pathlib import Path
 from typing import Final
 
 SANDBOX_EXEC: Final = "/usr/bin/sandbox-exec"
+BWRAP: Final = "/usr/bin/bwrap"  # a fixed path, not a PATH lookup, like sandbox-exec
+BACKEND_SANDBOX_EXEC: Final = "sandbox-exec"
+BACKEND_BWRAP: Final = "bwrap"
+NO_SANDBOX: Final = (
+    "no sandbox on this machine (sandbox-exec on macOS, bwrap on Linux): "
+    "refusing to run model-written code"
+)
 # secrets the sandboxed code may not read; every other read under $HOME is NOT blocked (3.6)
 DENY_READ_UNDER_HOME: Final = (".ssh", ".aws", ".gnupg", ".kiro", ".claude", ".netrc", ".config/gh")
 ENV_PATH: Final = "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
 CPU_S_MAX: Final = 30  # RLIMIT_CPU; the wall timeout is the other backstop
 FILE_BYTES_MAX: Final = 10 * 1024 * 1024  # RLIMIT_FSIZE: largest file a process may write
 OPEN_FILES_MAX: Final = 256
+MEMORY_BYTES_MAX: Final = 2 * 1024 * 1024 * 1024  # RLIMIT_AS, Linux only: macOS ignores it
 OUTPUT_BYTES_MAX: Final = 65_536  # kept stdout and stderr, each
 KILL_WAIT_S: Final = 5.0
 CANARY_TIMEOUT_S: Final = 20.0
-CANARY_PORT: Final = 9  # discard port; nothing listens, so only the sandbox can make it fail
+STDERR_TAIL_CHARS: Final = 300  # enough for bwrap's one-line reason it couldn't start
 
 STATUS_OK: Final = "ok"
 STATUS_TIMEOUT: Final = "timeout"
 CANARY_OK: Final = "NET_DENIED WRITE_DENIED"
+# argv[2] is a port with a live listener outside, so only the sandbox can make the connect fail:
+# sandbox-exec answers EPERM, bwrap's empty network namespace ECONNREFUSED. EROFS is bwrap's
+# read-only root. A missing dir is not a denial, so it doesn't count.
 CANARY_SOURCE: Final = (
-    "import os, socket, sys\n"
+    "import errno, os, socket, sys\n"
     "out = []\n"
     "try:\n"
-    "    socket.create_connection(('127.0.0.1', __PORT__), timeout=2)\n"
-    "except PermissionError:\n"
-    "    out.append('NET_DENIED')\n"
+    "    socket.create_connection(('127.0.0.1', int(sys.argv[2])), timeout=2).close()\n"
     "except OSError:\n"
-    "    out.append('NET_OTHER')\n"
+    "    out.append('NET_DENIED')\n"
     "try:\n"
     "    open(os.path.join(sys.argv[1], 'canary.txt'), 'w').close()\n"
-    "except PermissionError:\n"
-    "    out.append('WRITE_DENIED')\n"
+    "except OSError as err:\n"
+    "    if err.errno in (errno.EACCES, errno.EPERM, errno.EROFS):\n"
+    "        out.append('WRITE_DENIED')\n"
     "print(' '.join(out))\n"
-).replace("__PORT__", str(CANARY_PORT))
+)
 
 
 @dataclass(frozen=True)
@@ -80,19 +94,65 @@ def build_profile(scratch: Path, home: Path) -> str:
     lines = ["(version 1)", "(allow default)", "(deny network*)", "(deny file-write*)"]
     lines.append(f'(allow file-write* (subpath {_quote(scratch)}) (literal "/dev/null"))')
     for name in DENY_READ_UNDER_HOME:
-        lines.append(f"(deny file-read* (subpath {_quote(home / name)}))")
+        # a symlinked secret is readable at its target, so deny both paths
+        for path in dict.fromkeys((home / name, (home / name).resolve())):
+            lines.append(f"(deny file-read* (subpath {_quote(path)}))")
     _require(any(line.startswith("(deny network") for line in lines), "the network is denied")
     return "\n".join(lines) + "\n"
 
 
+def build_bwrap_argv(scratch: Path, home: Path) -> list[str]:
+    """bwrap: the whole filesystem read-only, a fresh /dev and /proc, an empty network namespace,
+    scratch writable, and each secret under home that exists covered: a dir by an empty tmpfs, a
+    file by /dev/null. Covering the resolved path also covers a symlink to it."""
+    _require(scratch.is_absolute() and home.is_absolute(), "paths are absolute")
+    argv = [BWRAP, "--die-with-parent", "--unshare-net", "--unshare-pid", "--unshare-ipc"]
+    argv += ["--unshare-uts", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc"]
+    for name in DENY_READ_UNDER_HOME:
+        secret = (home / name).resolve()
+        if secret.is_dir():
+            argv += ["--tmpfs", str(secret)]
+        elif secret.exists():
+            argv += ["--ro-bind", "/dev/null", str(secret)]
+    argv += ["--bind", str(scratch), str(scratch), "--chdir", str(scratch)]
+    _require("--unshare-net" in argv, "the network is denied")
+    # later mounts sit on top, so scratch must come after the read-only root
+    _require(argv.index("--ro-bind") < argv.index("--bind"), "scratch is bound after the root")
+    return argv
+
+
+def backend() -> str | None:
+    """The sandbox this machine has, or None. Each platform has exactly one; no fallback."""
+    platform = sys.platform  # a plain str, so the checker types both branches on either host
+    if platform == "darwin":
+        return BACKEND_SANDBOX_EXEC if os.path.exists(SANDBOX_EXEC) else None
+    if platform.startswith("linux"):
+        return BACKEND_BWRAP if os.path.exists(BWRAP) else None
+    return None
+
+
+def sandbox_argv(argv: list[str], scratch: Path, home: Path) -> list[str]:
+    """argv wrapped in this machine's sandbox. Raises FileNotFoundError when there is none."""
+    assert argv, "a command to wrap"
+    kind = backend()
+    if kind == BACKEND_SANDBOX_EXEC:
+        return [SANDBOX_EXEC, "-p", build_profile(scratch, home), *argv]
+    if kind == BACKEND_BWRAP:
+        return [*build_bwrap_argv(scratch, home), "--", *argv]
+    raise FileNotFoundError(NO_SANDBOX)
+
+
 def _limit_resources() -> None:
-    """Runs in the child before exec. Memory is not capped: macOS ignores RLIMIT_AS/DATA."""
+    """Runs in the child before exec, and the sandbox passes the limits on."""
     assert CPU_S_MAX > 0 and FILE_BYTES_MAX > 0, "limits are positive"
     assert OPEN_FILES_MAX >= 64, "enough descriptors for python and pytest"
     resource.setrlimit(resource.RLIMIT_CPU, (CPU_S_MAX, CPU_S_MAX))
     resource.setrlimit(resource.RLIMIT_FSIZE, (FILE_BYTES_MAX, FILE_BYTES_MAX))
     resource.setrlimit(resource.RLIMIT_NOFILE, (OPEN_FILES_MAX, OPEN_FILES_MAX))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
+    platform = sys.platform  # a plain str, as in backend()
+    if platform.startswith("linux"):
+        resource.setrlimit(resource.RLIMIT_AS, (MEMORY_BYTES_MAX, MEMORY_BYTES_MAX))
 
 
 def scrubbed_env(scratch: Path) -> dict[str, str]:
@@ -121,15 +181,15 @@ def _kill_group(proc: subprocess.Popen[bytes]) -> None:
 
 
 def run_sandboxed(argv: list[str], scratch: Path, timeout_s: float) -> SandboxResult:
-    """Run argv with cwd = scratch under the profile. Never raises on the child's behavior;
-    a missing sandbox-exec raises FileNotFoundError, which callers prevent with check_sandbox."""
+    """Run argv with cwd = scratch inside the sandbox. Never raises on the child's behavior;
+    a missing sandbox raises FileNotFoundError, which callers prevent with check_sandbox."""
     assert argv and timeout_s > 0, "a command and a positive timeout"
     _require(scratch.is_absolute() and scratch.is_dir(), "scratch is an existing absolute dir")
     real = scratch.resolve()
-    profile = build_profile(real, Path.home().resolve())
+    command = sandbox_argv(argv, real, Path.home().resolve())
     with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err:
         proc = subprocess.Popen(
-            [SANDBOX_EXEC, "-p", profile, *argv],
+            command,
             cwd=real,
             env=scrubbed_env(real),
             stdin=subprocess.DEVNULL,
@@ -160,23 +220,29 @@ def run_sandboxed(argv: list[str], scratch: Path, timeout_s: float) -> SandboxRe
 
 def check_sandbox() -> str | None:
     """None when the sandbox is proven to deny a network connect and a write outside scratch;
-    else why not. Runs a known-bad input through the real profile every time (fails closed)."""
+    else why not. Runs a known-bad input through the real sandbox every time (fails closed)."""
     assert CANARY_SOURCE and CANARY_TIMEOUT_S > 0, "the canary program and its timeout are defined"
     assert sys.executable, "an interpreter to run the canary with"
-    if sys.platform != "darwin" or not os.path.exists(SANDBOX_EXEC):
-        return "sandbox-exec is not available: refusing to run model-written code"
-    with tempfile.TemporaryDirectory(prefix="evsbx-canary-") as parent:
+    if backend() is None:
+        return NO_SANDBOX
+    with (
+        tempfile.TemporaryDirectory(prefix="evsbx-canary-") as parent,
+        socket.socket() as listener,
+    ):
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        port = str(listener.getsockname()[1])
         scratch = Path(parent).resolve() / "inside"
         outside = Path(parent).resolve() / "outside"
         scratch.mkdir()
         outside.mkdir()
+        canary = [sys.executable, "-c", CANARY_SOURCE, str(outside), port]
         try:
-            result = run_sandboxed(
-                [sys.executable, "-c", CANARY_SOURCE, str(outside)], scratch, CANARY_TIMEOUT_S
-            )
+            result = run_sandboxed(canary, scratch, CANARY_TIMEOUT_S)
         except OSError as err:
             return f"sandbox canary could not start: {err}"
         leaked = (outside / "canary.txt").exists()
     if result.status != STATUS_OK or result.stdout_text.strip() != CANARY_OK or leaked:
-        return f"sandbox canary did not see the attempts denied: {result.stdout_text.strip()!r}"
+        seen, why = result.stdout_text.strip(), result.stderr_text[-STDERR_TAIL_CHARS:]
+        return f"sandbox canary did not see the attempts denied: {seen!r}, stderr {why!r}"
     return None

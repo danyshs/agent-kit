@@ -1,4 +1,4 @@
-"""Goal: the authored steering suites load clean, keep the 4/2/2 role mix, and each case can both
+"""Goal: the authored steering suites load clean, keep each suite's role mix, and each case can both
 PASS and FAIL: it has a compliant and a violating synthetic run, and the verdict must flip between
 them (a case that cannot fail is broken). Method: copy the real case files into a throwaway root and
 a fake home; grade synthetic views with the real graders. No model calls."""
@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from lib.cli import EVALS_ROOT
 from lib.dataset import Case, Dataset, discover_world, load_dataset, load_limits
@@ -19,7 +19,6 @@ from lib.run import Event
 from tests.helpers_run import call, make_event, make_view
 
 SUITES = ("shell", "tiger-style-on-branches")
-CASES_PER_SUITE = 8
 SKILL = "tiger-style"
 ALWAYS = "---\ninclusion: always\n---\n\n# rule\n"
 SKILL_TEXT = "---\nname: tiger-style\ndescription: Style.\n---\n\n# tiger-style\n"
@@ -114,6 +113,8 @@ class AuthoredCasesMixin(_Base):
 
     suites: tuple[str, ...]
     planted: dict[str, Spec]
+    role_mix: ClassVar[dict[str, int]] = {"fire": 4, "no_fire": 2, "pressure": 2}
+    skill_instead: ClassVar[bool] = False
     root: Path
     dataset: Dataset
     tmp: tempfile.TemporaryDirectory[str]
@@ -147,12 +148,13 @@ class AuthoredCasesMixin(_Base):
 
     def test_everything_loads_without_rejections(self) -> None:
         self.assertEqual(self.dataset.rejections, ())
-        self.assertEqual(len(self.dataset.cases), CASES_PER_SUITE * len(self.suites))
+        cases_per_suite = sum(self.role_mix.values())
+        self.assertEqual(len(self.dataset.cases), cases_per_suite * len(self.suites))
 
-    def test_each_suite_has_eight_cases_in_a_4_2_2_mix(self) -> None:
+    def test_each_suite_has_its_role_mix(self) -> None:
         for suite in self.suites:
             roles = Counter(c.role for c in self.cases_of(suite))
-            self.assertEqual(dict(roles), {"fire": 4, "no_fire": 2, "pressure": 2}, suite)
+            self.assertEqual(dict(roles), self.role_mix, suite)
 
     def test_every_rule_is_used_and_every_case_names_a_rule(self) -> None:
         for suite in self.suites:
@@ -166,8 +168,11 @@ class AuthoredCasesMixin(_Base):
             self.assertIn("full", texts, case.id)
             self.assertIn(f"minus-{case.target}", texts, case.id)
             # none is the empty home: extras are dropped, so the skill is gone and a skill-load
-            # case would fail there for no reason (3.3)
-            self.assertEqual("none" in texts, not case.extra_skills, case.id)
+            # case would fail there for no reason. A skill-instead suite trades none for that arm,
+            # so twelve cases in three arms stay under the suite's cost cap
+            want_none = not case.extra_skills and not self.skill_instead
+            self.assertEqual("none" in texts, want_none, case.id)
+            self.assertEqual("skill-instead" in texts, self.skill_instead, case.id)
 
     def test_tiger_style_cases_supply_the_skill_and_never_name_it(self) -> None:
         for case in self.cases_of("tiger-style-on-branches"):

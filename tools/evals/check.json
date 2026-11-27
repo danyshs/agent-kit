@@ -1,0 +1,8 @@
+{
+  "why": "Floors: raise them when files or tests are added, never lower them. A test may skip only for a reason matching skip_reason, and at most skipped_max may: tests that read a real home skip when HOME is empty.",
+  "py_files_min": 40,
+  "typed_files_min": 37,
+  "tests_min": 383,
+  "skipped_max": 0,
+  "skip_reason": ": (no \\S+ here|no \\S+ on this machine|tiger-style skill is not installed)$"
+}

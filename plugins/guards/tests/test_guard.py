@@ -8,6 +8,9 @@ script as a subprocess, read status and output. GUARD_PATH points the suite at a
 
 from __future__ import annotations
 
+import contextlib
+import datetime
+import fcntl
 import importlib.machinery
 import importlib.util
 import json
@@ -821,6 +824,131 @@ class ApprovedProposal(GuardCase):
         self.assert_refused("agent", self.hook("haiku"), "spent $20.00 of $20.00")
 
 
+def now_stamp(offset_seconds: float = 0) -> str:
+    moment = datetime.datetime.now(datetime.timezone.utc)
+    return (moment + datetime.timedelta(seconds=offset_seconds)).isoformat()
+
+
+def stamped(record: Record, at: str) -> Record:
+    return {**record, "timestamp": at}
+
+
+class LaunchHolds(GuardCase):
+    """Goal: with no budget line a $10 default applies, and launches started together can't all
+    pass on the spend from before any of them ran. Method: real guard processes against one
+    session; the ledger is read back, or written by hand to set up holds."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.ledger = self.session.main.with_suffix("") / "guard-launches.jsonl"
+        self.ledger.parent.mkdir(parents=True, exist_ok=True)
+
+    def write_holds(self, holds: list[tuple[float, float]]) -> None:
+        """(seconds ago, dollars) per hold."""
+        records: list[Record] = [
+            {"timestamp": now_stamp(-ago), "dollars": dollars} for ago, dollars in holds
+        ]
+        self.ledger.write_bytes(lines(records))
+
+    def reply(self, agent_id: str, directory: Path | None = None) -> None:
+        record = stamped(assistant(agent_id, 0, 0, "claude-haiku-5-5"), now_stamp())
+        if directory is None:
+            self.session.write_agent(agent_id, [record])
+            return
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / f"{agent_id}.jsonl").write_bytes(lines([record]))
+
+    def test_default_cap_without_a_budget_line(self) -> None:
+        # haiku output is $0.50/M: $0.50 fits under $10; $9.995 plus the $0.0075 floor does not
+        self.session.write_main([typed("hi"), assistant("m0", 10)])
+        self.session.write_agent("a1", [assistant("x", 0, 20, "claude-haiku-5-5", MILLION)])
+        stdout = self.assert_allowed("agent", self.hook("haiku"))
+        self.assertIn(
+            "$0.50 of $10.00 since session start (no budget line: default $10.00)", stdout
+        )
+        self.session.write_agent("a1", [assistant("x", 0, 20, "claude-haiku-5-5", 19_990_000)])
+        stderr = self.assert_refused("agent", self.hook("haiku"), "of $10.00")
+        self.assertIn("end a reply with 'proposed budget $N'", stderr)
+
+    def test_launches_together_share_the_budget(self) -> None:
+        # $0.02 fits two $0.0075 haiku floors, not three; stdin from a file so all four run at once
+        self.session.write_main([typed("budget $0.02")])
+        hook_path = Path(self.temp.name) / "hook.json"
+        hook_path.write_text(json.dumps(self.hook("haiku")))
+        command = [sys.executable, "-I", str(GUARD), "agent"]
+        statuses: list[int] = []
+        with contextlib.ExitStack() as stack:
+            processes = [
+                subprocess.Popen(
+                    command,
+                    stdin=stack.enter_context(hook_path.open("rb")),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                for _ in range(4)
+            ]
+            statuses = [process.wait(timeout=30) for process in processes]
+        self.assertEqual(sorted(statuses), [0, 0, 2, 2])
+
+    def test_a_reply_answers_the_oldest_hold_before_it(self) -> None:
+        # a reply from before the holds answers none of them
+        self.session.write_main([typed("budget $0.02")])
+        self.session.write_agent("old", [assistant("o", 0, 5, "claude-haiku-5-5")])
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.assert_refused("agent", self.hook("haiku"), "held by launches not yet replying")
+        self.reply("a1")
+        self.reply("a2")
+        self.assertIn("$0.00 held", self.assert_allowed("agent", self.hook("haiku")))
+
+    def test_a_rhino_transcript_answers_no_hold(self) -> None:
+        self.session.write_main([typed("budget $0.02")])
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.reply("r1", self.session.subagents.parent / "rhinos")
+        self.assert_refused("agent", self.hook("haiku"), "held by launches not yet replying")
+
+    def test_old_holds_lapse_and_recent_ones_count(self) -> None:
+        self.session.write_main([typed("budget $0.50")])
+        self.write_holds([(11 * 60, 1.0)])
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.write_holds([(60, 1.0)])
+        self.assert_refused("agent", self.hook("haiku"), "$1.00 held by launches")
+
+    def test_holds_before_a_new_budget_line_do_not_count(self) -> None:
+        self.session.write_main([stamped(typed("budget $0.50"), now_stamp(-30))])
+        self.write_holds([(60, 1.0)])
+        self.assertIn("$0.00 held", self.assert_allowed("agent", self.hook("haiku")))
+
+    def test_a_broken_ledger_refuses_and_a_cut_last_line_is_skipped(self) -> None:
+        self.session.write_main([typed("budget $0.50")])
+        good = json.dumps({"timestamp": now_stamp(-60), "dollars": 0.01}).encode() + b"\n"
+        self.ledger.write_bytes(good + b'{"timest\n' + good)
+        self.assert_refused("agent", self.hook("haiku"), "unreadable")
+        self.ledger.write_bytes(good + b'{"timest')
+        self.assertIn("$0.01 held", self.assert_allowed("agent", self.hook("haiku")))
+        self.ledger.write_bytes(json.dumps({"timestamp": now_stamp(), "dollars": True}).encode())
+        self.assert_refused("agent", self.hook("haiku"), "line 1 has no dollars")
+
+    def test_too_many_open_holds_refused(self) -> None:
+        self.session.write_main([typed("budget $20")])
+        self.write_holds([(1, 0.0)] * 64)
+        self.assert_refused("agent", self.hook("haiku"), "64 launches in 10 minutes")
+        self.write_holds([(1, 0.0)] * 63)
+        self.assert_allowed("agent", self.hook("haiku"))
+
+    def test_a_held_lock_refuses_instead_of_waiting(self) -> None:
+        self.session.write_main([typed("budget $0.50")])
+        with self.ledger.open("a+b") as handle:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            self.assert_refused("agent", self.hook("haiku"), "stayed locked")
+
+    def test_budget_off_holds_nothing(self) -> None:
+        self.session.write_main([typed("budget off")])
+        self.assert_allowed("agent", self.hook("haiku"))
+        self.assertFalse(self.ledger.exists())
+
+
 class HookCommands(GuardCase):
     """The hooks.json wrapper must turn a missing script into exit 2, not let it through."""
 
@@ -856,8 +984,28 @@ MUTANTS: dict[str, tuple[str, str]] = {
         "seen.output_tokens = seen.output_tokens",
     ),
     "budget-cmp": (
+        "if spend.dollars + held + floor > budget.dollars:",
+        "if spend.dollars + held + floor < budget.dollars:",
+    ),
+    "hold-held": (
+        "if spend.dollars + held + floor > budget.dollars:",
         "if spend.dollars + floor > budget.dollars:",
-        "if spend.dollars + floor < budget.dollars:",
+    ),
+    "hold-write": ("kept = [*waiting, Hold(now, floor)]", "kept = [*waiting]"),
+    "hold-lapse": ("if (now - hold.at).total_seconds() < HOLD_SECONDS_MAX", "if True"),
+    "hold-oldest": ("if waiting and waiting[0].at <= reply:", "if waiting:"),
+    "hold-release": ("if waiting and waiting[0].at <= reply:", "if False:"),
+    "hold-since": ("for hold in waiting if hold.at >= budget.since)", "for hold in waiting)"),
+    "hold-rhino": (
+        'if first is not None and path.parent.name == "subagents":',
+        "if first is not None:",
+    ),
+    "hold-max": ("if len(waiting) >= HOLDS_MAX:", "if len(waiting) > HOLDS_MAX:"),
+    "hold-lock": ("fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)", "pass"),
+    "hold-cut-line": ("continue  # a hook killed mid-write", "raise ValueError('cut')"),
+    "default-cap": (
+        "budget = Budget(DEFAULT_BUDGET_DOLLARS, False, EPOCH, default=True)",
+        'return "guard: no budget line"',
     ),
     "human-only": ('if field(record, "origin", "kind") != "human":', "if False:"),
     "first-line": (

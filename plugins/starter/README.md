@@ -4,6 +4,6 @@ Installs the Starter pack in one go: [`tiger-style`](../tiger-style/README.md), 
 
     claude plugin install starter@agent-kit
 
-Their always-on rules come to about 9,100 bytes together. `guards` needs python3.
+Their always-on rules come to about 2,300 bytes together. `guards` needs python3.
 
 Back to the [plugin list](../../README.md#plugin-docs).

@@ -1,11 +1,29 @@
 ---
 name: antagonist-protagonist
-description: How to run the antagonist and protagonist passes on a spec or plan before approval: the brief template, what each reviewer gets, the final table and pushback_report.md. Load before launching either reviewer.
+description: How to run the antagonist and protagonist passes on a spec or plan before approval: when they run, the order, the brief template, who decides, the final table and pushback_report.md. Load before launching either reviewer.
 ---
 
 # Running the antagonist and protagonist passes
 
-When the passes run, their order and who decides are in the antagonist-protagonist rule; it wins over this skill on any conflict. What each reviewer returns (tone markers, a ranked top 5, the files it needed) is in its agent file, `antagonist` and `protagonist`, which come with this plugin. Both are read-only, and a mid-size model is enough for both.
+A reviewer who checks whether a doc is clear doesn't ask whether it's the right thing to build; the antagonist does. A doc rewritten after one round of criticism tends to over-correct; the protagonist checks for that. What each reviewer returns (tone markers, a ranked top 5, the files it needed) is in its agent file, `antagonist` and `protagonist`, which come with this plugin. Both are read-only, and a mid-size model is enough for both.
+
+## When
+
+Any doc about to be marked final or approved: specs and plans. A rule file edit gets no pass by default; if the update isn't simple, ask the user whether there should be one. Not for running logs that never finalize (handoffs, notes, backlogs).
+
+## Order
+
+1. The doc.
+2. The antagonist pass.
+3. Your reply to the antagonist: check each claim against the code, concede or hold it, and apply the changes to the doc. Don't stop for the user here. Launching the two agents still follows any budget rule you have.
+4. The protagonist pass, on the updated doc.
+5. Your reply to the protagonist: check, apply, then show the user the final table and ask for approval.
+
+## Who decides
+
+- Neither reviewer is an authority. Check their top claims against the code before you pass them on.
+- Where the two disagree and the code doesn't settle it, the row is the user's call.
+- One round each. Re-run a side only on points whose meaning changed, at most once. After that the user's call stands.
 
 ## The briefs
 

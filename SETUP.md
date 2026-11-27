@@ -44,7 +44,7 @@ Restart Claude Code.
 
 ## Copying rules by hand
 
-Every rule is also a plain file in `rules/`. You can paste one into your own `~/.claude/CLAUDE.md` instead of installing the plugin. This works for every rule except `attention-levels`, `guards`, `pre-push` and `rhino-owl`, which need their plugin's scripts. The `debugging-discipline`, `egm-helper` and `fork-pr-check` rules are short and point to a skill with the detail, so also copy `plugins/<name>/skills/<name>/` into `~/.claude/skills/`.
+Every rule is also a plain file in `rules/`. You can paste one into your own `~/.claude/CLAUDE.md` instead of installing the plugin. This works for every rule except `attention-levels`, `guards`, `pre-push` and `rhino-owl`, which need their plugin's scripts. The `agent-orchestration`, `antagonist-protagonist`, `debugging-discipline`, `egm-helper`, `fork-pr-check` and `single-evidence-ledger` rules point to a skill with the detail, so also copy `plugins/<name>/skills/<name>/` into `~/.claude/skills/`. `antagonist-protagonist` also needs its two agents: copy `plugins/antagonist-protagonist/agents/*.md` into `~/.claude/agents/`.
 
 ## Repo layout
 
@@ -55,7 +55,7 @@ Every rule is also a plain file in `rules/`. You can paste one into your own `~/
 | `.claude-plugin/marketplace.json` | The plugin list Claude Code installs from. |
 | `snippets/statusline.sh` | The optional status line. |
 | `bin/doctor` | Checks the tools the optional plugins need and lists what you installed. |
-| `lint.sh` | The lint gate CI runs: ruff, pyright, shellcheck, fish and actionlint. |
+| `lint.sh` | The lint gate CI runs: ruff, pyright, shellcheck, actionlint, and the 1,500-word cap on all rules together. |
 | `SNAPSHOT` | The Claude Code version this was last tested with. |
 | `tools/` | The eval and trajectory tools ([tools/README.md](tools/README.md)). |
 

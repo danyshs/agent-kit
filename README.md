@@ -33,7 +33,7 @@ guard: refused: model fable is above the ceiling claude-opus-5-5 (in 10.0 > 4.0 
 | grep_search  | 2     | 2           | 1      |
 ```
 
-CI runs `lint.sh` (ruff, pyright strict, shellcheck, fish), the guard tests and the eval and trajectory suites on every push. Everything runs offline, and a skipped test fails the run. Code worth reading first:
+CI runs `lint.sh` (ruff, pyright strict, shellcheck, actionlint), the guard tests and the eval and trajectory suites on every push. Everything runs offline, and a skipped test fails the run. Code worth reading first:
 
 - [`guard.py`](plugins/guards/scripts/guard.py): reads the transcript backwards in 1 MB blocks (`lines_reversed`) and counts each message's usage once (`dedup_usage`). Standard library only.
 - [`isolation.py`](tools/evals/lib/isolation.py): an eval won't start with a tool name nobody has classified, so a bare file tool can't slip into a headless run.
@@ -71,7 +71,7 @@ The main reasons to use the kit. Each changes how Claude plans, researches, code
 
 | Plugin | What it does | Pick it if | Needs | Install |
 |---|---|---|---|---|
-| ★ [`guards`](plugins/guards/README.md) | Hooks that refuse a sub-agent launch over the budget you typed or above a model price ceiling, and stop a turn past a token cap. Without a budget, launches go through with a note. | You pay per token and want hard limits. | python3 | `claude plugin install guards@agent-kit` |
+| ★ [`guards`](plugins/guards/README.md) | Hooks that refuse a sub-agent launch over the budget you typed or above a model price ceiling, and stop a turn past a token cap. Without a budget line, launches stop at $10 a session. | You pay per token and want hard limits. | python3 | `claude plugin install guards@agent-kit` |
 
 ## Support plugins
 
@@ -94,7 +94,6 @@ Smaller helpers: lessons that keep Claude honest, and add-ons for the flagships.
 
 | Plugin | What it does | Pick it if | Needs | Install |
 |---|---|---|---|---|
-| [`pre-push`](plugins/pre-push/README.md) | Before a branch's first push (not main), asks you to confirm a review ran. It takes your word for it. | You want a review before anything leaves your machine. | git, `tiger-style`; [manual step](SETUP.md#pre-push) | `claude plugin install pre-push@agent-kit` |
 | [`fork-pr-check`](plugins/fork-pr-check/README.md) | In a fork, Claude checks the right repo before saying "there's no PR". | You contribute to other people's projects through forks. | | `claude plugin install fork-pr-check@agent-kit` |
 
 ## Install
@@ -152,14 +151,15 @@ Opinionated workflow comforts (off by default), separate from core safety and ev
 |---|---|---|---|---|
 | [`attention-levels`](plugins/attention-levels/README.md) | Type `(ENABLE_LOW_ENERGY)` on a tired day and Claude asks fewer questions; `(ENABLE_HIGH_ENERGY)` for more. | Your energy varies and you want Claude to match it. | python3 | `claude plugin install attention-levels@agent-kit` |
 | [`turn-sound`](plugins/turn-sound/README.md) | A short sound when Claude finishes or needs you, different per session. | You run several sessions at once or look away while it works. | jq, ffmpeg (else a Mac chime; silent on Linux) | `claude plugin install turn-sound@agent-kit` |
+| [`pre-push`](plugins/pre-push/README.md) | Before a branch's first push (not main), asks you to confirm a review ran. It takes your word for it, so it's a habit, not a check. | You want a nudge to review before anything leaves your machine. | git, `tiger-style`; [manual step](SETUP.md#pre-push) | `claude plugin install pre-push@agent-kit` |
 | [`code-voice`](plugins/code-voice/README.md) | My taste in comments and code: short, says why, no class hierarchies by default. | You like that style too. | | `claude plugin install code-voice@agent-kit` |
 | `resume-kit` | `/resume` checks a LaTeX resume against a job posting and refines it in a loop; every number and date must trace to your own evidence file. Now its own repo: [danyshs/resume-kit](https://github.com/danyshs/resume-kit). | You're job hunting with a LaTeX resume. | python3 or uv; a LaTeX build | `claude plugin marketplace add danyshs/resume-kit`, then `claude plugin install resume-kit@resume-kit` |
 
 ## Status
 
-**A personal setup, shared as is.** It's tested on macOS with the Claude Code version in [`SNAPSHOT`](SNAPSHOT). Linux should work (the scripts are plain sh and Python) but is untested; Windows is untested. Questions and bugs go to [GitHub issues](https://github.com/danyshs/agent-kit/issues).
+**A personal setup, shared as is.** I use it on macOS with the Claude Code version in [`SNAPSHOT`](SNAPSHOT), and CI runs the guard, evals and trajectory tests on macOS and Ubuntu 24.04. Windows is untested. Questions and bugs go to [GitHub issues](https://github.com/danyshs/agent-kit/issues).
 
-**No rule is proven yet.** I test whether each rule changes what Claude does, with and without it, and the suites are still too small to say. One early sign: with the tiger-style skill, Claude found 9 of 9 planted bugs of the kind it targets in review, against 6 of 9 without it (a small model, one suite). Four rules (`debugging-discipline`, `egm-helper`, `fork-pr-check`, `rhino-owl`) keep only a short part always loaded and point to a skill with the detail, to save context; whether Claude reads the skill at the right moment is untested too. The test tools are in [`tools/`](tools/README.md) to fork.
+**No rule is proven yet.** I test whether each rule changes what Claude does, with and without it, and the suites are still too small to say. One early sign: with the tiger-style skill, Claude found 9 of 9 planted bugs of the kind it targets in review, against 6 of 9 without it (a small model, one suite). All twelve rules together stay under 1,500 words (`lint.sh` fails past that), so installing everything costs little context. Eight keep only a short part always loaded and point to a skill with the detail; whether Claude reads the skill at the right moment is untested too. The test tools are in [`tools/`](tools/README.md) to fork.
 
 **Next:** bigger eval suites, detectors for loops and repeated reads in real sessions, and turning corrections I keep making into test cases.
 

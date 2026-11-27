@@ -1,8 +1,11 @@
 """`eval report steering/<name>`: the steering-ablation table from the ledger (design 3.7, 7.1).
 
-Reads ledger/steering_<name>.jsonl only: no dataset, no model calls. Never says "delete": a null
-result is "watch" or "non-discriminating" (7.1 outcome rule). Pairs full against minus-<file> and
-against none, over the cases that pass in full (the sanity gate).
+Reads ledger/steering_<name>.jsonl only: no dataset, no model calls. A null result on a few cases
+is "watch" or "non-discriminating", since a small suite can't prove a rule is dead. On enough cases
+(limits.json) it becomes advice: "demote" a long rule to a skill, or "prune" one no case needs, one
+file at a time. Pairs full against minus-<file>, none and skill-instead (the rule loaded as a skill
+instead), over the cases that pass in full (the sanity gate). A long rule that matters, but holds
+every case as a skill, is advised to move to one.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from lib.run import CLAUDE_DEFAULT_MODEL
 FINISHED_STATUSES: Final = ("ok", "denied_only")
 FULL_ARM: Final = "full"
 NONE_ARM: Final = "none"
+SKILL_INSTEAD_ARM: Final = "skill-instead"
 MINUS_PREFIX: Final = "minus-"
 BOOTSTRAP_SEED: Final = 20261112  # fixed, so a re-run of the same ledger prints the same interval
 CI_TAIL: Final = 0.05  # 90% percentile interval
@@ -37,6 +41,11 @@ class ReportLimits:
     resamples: int
     min_cases_for_ci: int
     ledger_lines_max: int
+    # a null result on this many cases is advice, not noise; starting guesses, not yet checked
+    # against what happened after a rule was moved or cut
+    demote_words_max: int  # longer than this and no lift: the rule should be a skill
+    demote_cases_min: int
+    prune_cases_min: int  # at least demote_cases_min: cutting needs more proof than moving
 
 
 @dataclass(frozen=True)
@@ -65,6 +74,7 @@ class CaseRow:
     full: str  # "passed/finished" per arm, "-" when the arm has no finished run
     minus: str
     none: str
+    skill: str  # the skill-instead arm
 
 
 @dataclass(frozen=True)
@@ -72,12 +82,15 @@ class FileReport:
     suite: str
     model_id: str
     file_bytes: int | None
+    file_words: int | None
     rows: tuple[CaseRow, ...]
     broken: tuple[str, ...]  # cases failing in full: "broken case or grader", out of the tally
     changed: tuple[str, ...]  # sanity cases whose pass rate falls when the file is removed
     none_failed: tuple[str, ...]  # sanity cases that fail in the none arm
+    skill_changed: tuple[str, ...]  # sanity cases whose pass rate falls with the rule as a skill
     vs_minus: PairedResult | None
     vs_none: PairedResult | None
+    vs_skill: PairedResult | None
     credits_per_run: float | None
     excluded_runs: int  # runs not finished (timeout, harness_error, budget_abort, contaminated)
     verdict: str
@@ -108,7 +121,12 @@ def load_report_limits(path: Path) -> ReportLimits:
         resamples=_positive_int(raw, "BOOTSTRAP_RESAMPLES"),
         min_cases_for_ci=_positive_int(raw, "MIN_CASES_FOR_CI"),
         ledger_lines_max=_positive_int(raw, "LEDGER_LINES_MAX"),
+        demote_words_max=_positive_int(raw, "DEMOTE_WORDS_MAX"),
+        demote_cases_min=_positive_int(raw, "DEMOTE_CASES_MIN"),
+        prune_cases_min=_positive_int(raw, "PRUNE_CASES_MIN"),
     )
+    if limits.prune_cases_min < limits.demote_cases_min:
+        raise ValueError("limits.json: PRUNE_CASES_MIN must be at least DEMOTE_CASES_MIN")
     assert limits.resamples > 0 and limits.min_cases_for_ci > 0, "bounds are positive"
     return limits
 
@@ -273,25 +291,76 @@ def _pair(
     )
 
 
+def skill_held(
+    vs_skill: PairedResult | None, skill_changed: int, file_words: int | None, limits: ReportLimits
+) -> int | None:
+    """Cases a long rule held as a skill, when there are enough to move it; else None."""
+    assert skill_changed >= 0, "a count"
+    if vs_skill is None or skill_changed:
+        return None
+    long_rule = file_words is not None and file_words > limits.demote_words_max
+    if not long_rule or vs_skill.n_cases < limits.demote_cases_min:
+        return None
+    assert vs_skill.n_cases > 0, "enough cases is some cases"
+    return vs_skill.n_cases
+
+
 def decide(
     sanity_n: int,
     vs_minus: PairedResult | None,
     changed: int,
     none_failed: int,
+    file_words: int | None,
+    limits: ReportLimits,
+    held_as_skill: int | None = None,
 ) -> str:
-    """7.1 outcome rule. Order matters: no minus data, no clean case, then the interval."""
+    """7.1 outcome rule. Order matters: no minus data, no clean case, a removal that matters
+    (moved to a skill if it held every case as one), the interval, a changed case, and only then
+    the null result."""
     assert sanity_n >= 0 and changed >= 0 and none_failed >= 0, "counts are not negative"
     if sanity_n == 0:
         return "incomplete: no case passes in full"
     if vs_minus is None:
         return "incomplete: no finished minus-arm runs"
-    if vs_minus.ci90_low is not None and vs_minus.ci90_low > 0:
+    lifted = vs_minus.ci90_low is not None and vs_minus.ci90_low > 0
+    if (lifted or changed) and held_as_skill is not None:
+        return (
+            f"demote: {file_words} words loaded every session, and as a skill it held all "
+            f"{held_as_skill} cases; move it to a skill and keep a one-line pointer"
+        )
+    if lifted:
         return "keep: removal breaks cases, interval excludes 0"
     if changed:
         return f"watch: removal changed {changed} case(s); raw counts or interval too weak"
+    return null_verdict(vs_minus.n_cases, none_failed, file_words, limits)
+
+
+def null_verdict(
+    n_cases: int, none_failed: int, file_words: int | None, limits: ReportLimits
+) -> str:
+    """Removal changed no case. Prune needs the most cases, demote fewer but a long rule; under
+    both it stays a watch. Cuts go one file at a time because overlapping rules mask each other."""
+    assert n_cases > 0 and none_failed >= 0, "a null result has cases"
+    assert limits.demote_cases_min <= limits.prune_cases_min, "the loader checks the order"
+    if n_cases >= limits.prune_cases_min:
+        if none_failed:
+            return (
+                f"prune: no lift over {n_cases} cases, yet the none arm fails, so another rule "
+                "covers this one; merge them, one file at a time, re-running after each"
+            )
+        return (
+            f"prune: no lift over {n_cases} cases and the model obeys with no rules at all; "
+            "cut it, one file at a time, re-running after each"
+        )
+    long_rule = file_words is not None and file_words > limits.demote_words_max
+    if long_rule and n_cases >= limits.demote_cases_min:
+        return (
+            f"demote: {file_words} words loaded every session and no lift over {n_cases} cases; "
+            "move the detail to a skill and keep a short pointer"
+        )
     if none_failed:
         return "watch: null result, but the rule fails in the none arm"
-    return "non-discriminating: null result and the none arm never failed (not deletable)"
+    return "non-discriminating: null result and the none arm never failed (too few cases to cut)"
 
 
 def build_report(
@@ -299,6 +368,7 @@ def build_report(
     model_id: str,
     runs: Sequence[LedgerRun],
     file_bytes: int | None,
+    file_words: int | None,
     limits: ReportLimits,
 ) -> FileReport:
     assert suite and model_id, "a suite and a model"
@@ -306,32 +376,44 @@ def build_report(
     assert name, "suite is steering/<name>"
     mine = latest_runs(runs, model_id)
     full, minus = _by_arm(mine, FULL_ARM), _by_arm(mine, MINUS_PREFIX + name)
-    none = _by_arm(mine, NONE_ARM)
+    none, skill = _by_arm(mine, NONE_ARM), _by_arm(mine, SKILL_INSTEAD_ARM)
     sanity = {c for c, flags in full.items() if pass_pow_k(flags) == 1.0}
     broken = tuple(sorted(set(full) - sanity))
     rate_full = {c: pass_rate(full[c]) for c in sanity}
     rate_minus = {c: pass_rate(minus[c]) for c in sanity if c in minus}
     rate_none = {c: pass_rate(none[c]) for c in sanity if c in none}
+    rate_skill = {c: pass_rate(skill[c]) for c in sanity if c in skill}
     vs_minus, vs_none = _pair(rate_full, rate_minus, limits), _pair(rate_full, rate_none, limits)
+    vs_skill = _pair(rate_full, rate_skill, limits)
     changed = tuple(sorted(c for c in rate_minus if rate_minus[c] < rate_full[c]))
     none_failed = tuple(sorted(c for c in rate_none if rate_none[c] < 1.0))
+    skill_changed = tuple(sorted(c for c in rate_skill if rate_skill[c] < rate_full[c]))
+    held = skill_held(vs_skill, len(skill_changed), file_words, limits)
     credits = [r.credits for r in mine if r.credits is not None and r.status in FINISHED_STATUSES]
     cases = sorted({r.case_id for r in mine})
     return FileReport(
         suite=suite,
         model_id=model_id,
         file_bytes=file_bytes,
+        file_words=file_words,
         rows=tuple(
-            CaseRow(c, _cell(full.get(c)), _cell(minus.get(c)), _cell(none.get(c))) for c in cases
+            CaseRow(
+                c, _cell(full.get(c)), _cell(minus.get(c)), _cell(none.get(c)), _cell(skill.get(c))
+            )
+            for c in cases
         ),
         broken=broken,
         changed=changed,
         none_failed=none_failed,
+        skill_changed=skill_changed,
         vs_minus=vs_minus,
         vs_none=vs_none,
+        vs_skill=vs_skill,
         credits_per_run=sum(credits) / len(credits) if credits else None,
         excluded_runs=sum(1 for r in mine if r.status not in FINISHED_STATUSES),
-        verdict=decide(len(sanity), vs_minus, len(changed), len(none_failed)),
+        verdict=decide(
+            len(sanity), vs_minus, len(changed), len(none_failed), file_words, limits, held
+        ),
     )
 
 
@@ -355,18 +437,24 @@ def render_table(report: FileReport, limits: ReportLimits) -> list[str]:
     name = report.suite.partition("/")[2]
     assert name, "suite is steering/<name>"
     size = "?" if report.file_bytes is None else str(report.file_bytes)
+    words = "?" if report.file_words is None else str(report.file_words)
     credits = "?" if report.credits_per_run is None else f"{report.credits_per_run:.4f}"
     lines = [
-        f"{report.suite} model={report.model_id} file_bytes={size} credits_per_run={credits}",
-        f"{'case':<42} {'full':>5} {'minus-' + name:>8} {'none':>5}",
+        f"{report.suite} model={report.model_id} file_bytes={size} file_words={words} "
+        f"credits_per_run={credits}",
+        f"{'case':<42} {'full':>5} {'minus-' + name:>8} {'none':>5} {SKILL_INSTEAD_ARM:>13}",
     ]
-    lines += [f"{r.case_id:<42} {r.full:>5} {r.minus:>8} {r.none:>5}" for r in report.rows]
+    lines += [
+        f"{r.case_id:<42} {r.full:>5} {r.minus:>8} {r.none:>5} {r.skill:>13}" for r in report.rows
+    ]
     lines += [
         _pair_line(f"full vs minus-{name}", report.vs_minus, limits),
         _pair_line("full vs none", report.vs_none, limits),
+        _pair_line(f"full vs {SKILL_INSTEAD_ARM}", report.vs_skill, limits),
         f"broken in full (out of the tally): {', '.join(report.broken) or 'none'}",
         f"changed by removal: {', '.join(report.changed) or 'none'}",
         f"failing in none: {', '.join(report.none_failed) or 'none'}",
+        f"changed as a skill: {', '.join(report.skill_changed) or 'none'}",
         f"unfinished runs excluded: {report.excluded_runs}",
         f"verdict: {report.verdict}",
         f"report: suite={report.suite} model={report.model_id} cases={len(report.rows)} "
@@ -396,6 +484,19 @@ def parse_report_args(argv: list[str], default_home: Path) -> tuple[str, str, Pa
     return argv[0], options["--model"], Path(options["--home"]).expanduser()
 
 
+def rule_size(path: Path) -> tuple[int | None, int | None]:
+    """(bytes, words) of the rule file; None for what can't be read, so the report says "?"."""
+    if not path.is_file():
+        return None, None
+    size = path.stat().st_size
+    try:
+        words = len(path.read_text(encoding="utf-8").split())
+    except (OSError, UnicodeDecodeError):
+        return size, None
+    assert size >= 0 and words >= 0, "sizes are not negative"
+    return size, words
+
+
 def run_report(argv: list[str], root: Path, default_home: Path) -> tuple[list[str], int]:
     """(output lines, exit code) for `eval report`; a usage error is one line, exit 2."""
     assert root.is_dir(), "root is the dataset directory"
@@ -408,9 +509,8 @@ def run_report(argv: list[str], root: Path, default_home: Path) -> tuple[list[st
     runs = read_ledger(root / "ledger" / f"steering_{name}.jsonl", limits.ledger_lines_max)
     if isinstance(runs, str):
         return [runs, f"report: suite={suite} no ledger"], EXIT_BAD_LEDGER
-    steering_file = kiro_home / "steering" / f"{name}.md"
-    size = steering_file.stat().st_size if steering_file.is_file() else None
-    lines = render_table(build_report(suite, model_id, runs, size, limits), limits)
+    size, words = rule_size(kiro_home / "steering" / f"{name}.md")
+    lines = render_table(build_report(suite, model_id, runs, size, words, limits), limits)
     assert lines[-1].startswith("report: "), "the status line is last"
     return lines, EXIT_OK
 

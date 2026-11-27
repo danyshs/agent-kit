@@ -25,7 +25,14 @@ from lib.skill_report import (
     write_totals,
 )
 
-LIMITS = ReportLimits(resamples=300, min_cases_for_ci=8, ledger_lines_max=1000)
+LIMITS = ReportLimits(
+    resamples=300,
+    min_cases_for_ci=8,
+    ledger_lines_max=1000,
+    demote_words_max=350,
+    demote_cases_min=12,
+    prune_cases_min=16,
+)
 MODEL = CLAUDE_DEFAULT_MODEL
 
 

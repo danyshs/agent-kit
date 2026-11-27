@@ -8,7 +8,8 @@ Keeps what Claude knows trustworthy across sessions. Every fact has one home and
 
 | Part | File | When it runs |
 |---|---|---|
-| Rule | `rules/single-evidence-ledger.1.json` ([plain copy](../../rules/single-evidence-ledger.md)) | In context from the start of every session |
+| Rule | `rules/single-evidence-ledger.1.json` ([plain copy](../../rules/single-evidence-ledger.md)) | In context from the start of every session: one home per fact, current state only, dated claims |
+| Skill | `skills/single-evidence-ledger/SKILL.md` | Claude reads it before creating or editing `FACTS.md`, a handoff or a status doc: every rule in full, and the ledger below |
 
 ## FACTS.md: how a guess becomes a fact
 
