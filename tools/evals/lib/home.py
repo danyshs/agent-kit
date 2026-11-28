@@ -73,11 +73,20 @@ def plan_home(
     always_on: frozenset[str],
     extra_steering: tuple[str, ...],
     extra_skills: tuple[str, ...],
+    *,
+    shipped: frozenset[str] = frozenset(),
 ) -> HomePlan | str:
-    """What goes in the home; a str is the reason this arm does not fit the target."""
+    """What goes in the home; a str is the reason this arm does not fit the target.
+
+    shipped holds the Kit's own skills (the --shipped rerun): they ride in every
+    arm but none, as installing the kit ships them alongside its rules. The minus
+    arm keeps the target's own skill — it removes the always-on rule, not the
+    skill — and the skill-instead arm replaces that skill with the rule's text."""
     assert target.kind in ("skill", "steering", "tool_group"), "target kind is known"
     if arm.kind == "none":
         return HomePlan((), (), None)  # none = the empty home, extras ignored (3.3)
+    if shipped and target.kind != "steering":
+        return "a shipped home fits steering targets only"
     if arm.kind in VALUE_ARMS:
         return _plan_value_home(arm, target, extra_steering, extra_skills)
     if target.kind == "skill":
@@ -94,18 +103,19 @@ def plan_home(
         assert arm.minus_file is not None, "a minus arm names its file"
         steering.discard(arm.minus_file)
     assert arm.kind != "full" or always_on <= steering, "full keeps every always-on file"
-    skills = tuple(sorted(set(extra_skills)))
+    extras = set(extra_skills)
     if arm.kind != SKILL_INSTEAD_ARM:
-        return HomePlan(skills, tuple(sorted(steering)), None)
+        return HomePlan(tuple(sorted(extras | shipped)), tuple(sorted(steering)), None)
     if target.kind != "steering" or target.name not in steering:
         return f"arm {arm.kind!r} needs a steering target the full arm loads"
-    if target.name in skills:
+    if target.name in extras:
         return f"arm {arm.kind!r}: a skill named {target.name!r} is already in the home"
     steering.discard(target.name)
-    return HomePlan(skills, tuple(sorted(steering)), None, rule_skill=target.name)
+    skills = (extras | shipped) - {target.name}
+    return HomePlan(tuple(sorted(skills)), tuple(sorted(steering)), None, rule_skill=target.name)
 
 
-def _copy_dir(src: Path, dest: Path, files_max: int) -> str | None:
+def copy_skill_dir(src: Path, dest: Path, files_max: int) -> str | None:
     """Copy a skill dir without following symlinks; a str is the reason it could not be."""
     assert files_max > 0 and not dest.exists(), "files_max positive, dest is a fresh path"
     if not (src / SKILL_FILE).is_file():
@@ -129,7 +139,7 @@ def _populate(
             if name == plan.snapshot_skill and snapshot_dir
             else src_home / "skills" / name
         )
-        problem = _copy_dir(src, dest / "skills" / name, files_max)
+        problem = copy_skill_dir(src, dest / "skills" / name, files_max)
         if problem:
             return problem
     for name in plan.steering:
@@ -193,11 +203,12 @@ def build_home(
     plugin: bool = False,
     claude_md: bool = False,
     rule_skill_description: str | None = None,
+    shipped: frozenset[str] = frozenset(),
 ) -> HomeDir | str:
     """Fill the empty dir `dest` for this arm; a str is the reason it could not be built."""
     assert dest.is_dir() and not any(dest.iterdir()), "dest must be an empty directory"
     assert src_home.is_dir(), "src_home must be a directory"
-    plan = plan_home(arm, target, always_on, extra_steering, extra_skills)
+    plan = plan_home(arm, target, always_on, extra_steering, extra_skills, shipped=shipped)
     if isinstance(plan, str):
         return plan
     if plan.snapshot_skill and snapshot_dir is None:

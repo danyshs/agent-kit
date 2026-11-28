@@ -1,5 +1,6 @@
 """Entry point behind bin/eval. Subcommands: static (step 1), run (step 2), report (step 3),
-spend (the paid-loop budget guard) and mine (the usage miner)."""
+spend (the paid-loop budget guard), mine (the usage miner) and kit-home (the shipped-kit
+home the rerun passes as --home)."""
 
 from __future__ import annotations
 
@@ -20,6 +21,7 @@ from lib.dataset import (
     load_lint_baseline,
     split_baseline,
 )
+from lib.kit import run_kit_home
 from lib.miner import run_mine
 from lib.report import run_report, run_spend
 from lib.run_cli import parse_run_args, run_suite
@@ -30,7 +32,7 @@ DEFAULT_KIRO_HOME: Final = Path("~/.kiro").expanduser()
 DEFAULT_HOME: Final = Path("~/.claude").expanduser()
 USAGE: Final = (
     "usage: eval static [--home DIR]\n"
-    "       eval run|report|spend|mine ...  (each prints its own usage)"
+    "       eval run|report|spend|mine|kit-home ...  (each prints its own usage)"
 )
 STATUS_EXIT_BAD_DATA: Final = 1
 STATUS_EXIT_USAGE: Final = 2
@@ -149,6 +151,15 @@ def main_mine(argv: list[str]) -> int:
     return code
 
 
+def main_kit_home(argv: list[str]) -> int:
+    """`eval kit-home --out DIR [--kit DIR]`: builds and checks the shipped-kit home."""
+    assert all(isinstance(arg, str) for arg in argv), "argv holds strings"
+    lines, code = run_kit_home(argv, EVALS_ROOT)
+    assert lines, "kit-home always prints at least one line"
+    print("\n".join(lines), file=sys.stdout if code == 0 else sys.stderr)
+    return code
+
+
 def main(argv: list[str]) -> int:
     assert all(isinstance(arg, str) for arg in argv), "argv holds strings"
     if argv and argv[0] == "mine":
@@ -159,6 +170,8 @@ def main(argv: list[str]) -> int:
         return main_report(argv[1:])
     if argv and argv[0] == "spend":
         return main_spend(argv[1:])
+    if argv and argv[0] == "kit-home":
+        return main_kit_home(argv[1:])
     parsed = parse_args(argv)
     if isinstance(parsed, str):
         print(parsed, file=sys.stderr)

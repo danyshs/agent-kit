@@ -267,7 +267,7 @@ def _read_json(path: Path) -> tuple[object, str]:
     return value, ""
 
 
-def _as_dict(value: object) -> dict[str, object] | None:
+def as_dict(value: object) -> dict[str, object] | None:
     if not isinstance(value, dict):
         return None
     raw = cast(dict[object, object], value)
@@ -324,7 +324,7 @@ def load_limits(path: Path) -> Limits:
     value, error = _read_json(path)
     if error:
         raise ValueError(f"{path}: {error}")
-    raw = _as_dict(value)
+    raw = as_dict(value)
     if raw is None:
         raise ValueError(f"{path}: top level must be an object")
     fields: dict[str, int] = {}
@@ -443,7 +443,7 @@ def discover_world(kiro_home: Path, root: Path, limits: Limits) -> World:
 def _load_trust_names(root: Path, tools: frozenset[str]) -> dict[str, str]:
     """v3 trust names differ from tool names (execute_bash is trusted as run_command)."""
     value, error = _read_json(root / "trust_names.json")
-    raw = _as_dict(value)
+    raw = as_dict(value)
     if error or raw is None:
         raise ValueError(f"trust_names.json: {error or 'top level must be an object'}")
     names: dict[str, str] = {}
@@ -465,7 +465,7 @@ def _load_tool_data(root: Path) -> tuple[frozenset[str], dict[str, tuple[str, ..
     if not tools:
         raise ValueError("known_tools.json: must be a non-empty list of strings")
     groups_value, error = _read_json(root / "tool_groups.json")
-    groups_raw = _as_dict(groups_value)
+    groups_raw = as_dict(groups_value)
     if error or groups_raw is None:
         raise ValueError(f"tool_groups.json: {error or 'top level must be an object'}")
     groups: dict[str, tuple[str, ...]] = {}
@@ -514,7 +514,7 @@ def _check_units(value: object, limits: Limits) -> str | None:
     ):
         return "must be a non-empty list of {identifier, suffixes}"
     for item in cast(list[object], value):
-        entry = _as_dict(item)
+        entry = as_dict(item)
         if entry is None or set(entry) != {"identifier", "suffixes"}:
             return "each item must be exactly {identifier, suffixes}"
         suffixes = _as_str_list(entry["suffixes"], items_max=limits.args_list_max)
@@ -634,11 +634,11 @@ def check_args(
 def _parse_assertion(
     raw: object, seen_ids: set[str], world: World, limits: Limits
 ) -> Assertion | str:
-    entry = _as_dict(raw)
+    entry = as_dict(raw)
     if entry is None or set(entry) != {"id", "grader", "args", "hard"}:
         return "assertion must be exactly {id, grader, args, hard}"
     assertion_id, grader, hard = entry["id"], entry["grader"], entry["hard"]
-    args = _as_dict(entry["args"])
+    args = as_dict(entry["args"])
     if not isinstance(assertion_id, str) or not ID_RE.fullmatch(assertion_id):
         return f"assertion id {assertion_id!r} must match {ID_RE.pattern}"
     if assertion_id in seen_ids:
@@ -765,7 +765,7 @@ def _check_prompts(
             return cast(str, prompt), (), ()
         return f"prompt must be non-empty, at most {limits.prompt_bytes_max} bytes"
     if per_arm is not None:
-        mapping = _as_dict(per_arm)
+        mapping = as_dict(per_arm)
         if not mapping or not all(_prompt_ok(v, limits) for v in mapping.values()):
             return (
                 f"arm_prompts must map arms to non-empty prompts under {limits.prompt_bytes_max} B"
@@ -1024,7 +1024,7 @@ def load_cases(
     rejections: list[Rejection] = []
     seen: set[str] = set()
     for item in items:
-        entry = _as_dict(item)
+        entry = as_dict(item)
         record_id = entry.get("id") if entry else None
         record_id = record_id if isinstance(record_id, str) else None
         if entry is None:
@@ -1075,7 +1075,7 @@ def load_rules(
 
 def _parse_rule(raw: object, suite_name: str, seen_ids: set[str], world: World) -> Rule | str:
     keys = {"id", "source_file", "trigger_situation", "observable", "grader"}
-    entry = _as_dict(raw)
+    entry = as_dict(raw)
     if entry is None or set(entry) != keys:
         return f"rule must be exactly {sorted(keys)}"
     texts = {key: entry[key] for key in keys}
@@ -1332,7 +1332,7 @@ def load_lint_baseline(path: Path) -> frozenset[tuple[str, str, str]]:
         raise ValueError(f"{path}: top level must be a list")
     accepted: set[tuple[str, str, str]] = set()
     for item in cast(list[object], value):
-        entry = _as_dict(item)
+        entry = as_dict(item)
         if entry is None or set(entry) != {"rule", "path", "message"}:
             raise ValueError(f"{path}: each entry must be exactly {{rule, path, message}}")
         if not all(isinstance(v, str) and v for v in entry.values()):

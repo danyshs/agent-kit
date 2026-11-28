@@ -58,7 +58,7 @@ from lib.run import (
 RUN_USAGE: Final = (
     "usage: eval run <steering|skill|value>/<name> [--engine claude|kiro] [--tier smoke|standard] "
     "[--model ID] [--arm ARM] [--case ID] [--repeats N] [--probe-run] [--home DIR] "
-    "[--rules system-prompt|claude-md]"
+    "[--rules system-prompt|claude-md] [--shipped]"
 )
 SCRATCH_PARENT: Final = "/tmp"  # throwaway homes and cwds live here, never under the repo
 ENGINE_FLAGS: Final = {"claude": CLAUDE_ENGINE, "kiro": KIRO_ENGINE}
@@ -88,6 +88,7 @@ class RunArgs:
     repeats: int | None = None
     engine: str = KIRO_ENGINE
     rules_claude_md: bool = False  # Claude: rules via a CLAUDE.md in the home, not system prompt
+    shipped: bool = False  # the kit as installed: its own skills ride in every arm but none
 
 
 def parse_run_args(argv: list[str], default_home: Path | None = None) -> RunArgs | str:
@@ -102,11 +103,14 @@ def parse_run_args(argv: list[str], default_home: Path | None = None) -> RunArgs
     case_id: str | None = None
     repeats: int | None = None
     probe = False
+    shipped = False
     rest, index = argv[1:], 0
     while index < len(rest):  # bounded by ARGV_MAX
         flag = rest[index]
         if flag == "--probe-run":
             probe, index = True, index + 1
+        elif flag == "--shipped":
+            shipped, index = True, index + 1
         elif flag in (
             "--tier",
             "--model",
@@ -151,6 +155,7 @@ def parse_run_args(argv: list[str], default_home: Path | None = None) -> RunArgs
         repeats,
         engine,
         options["--rules"] == "claude-md",
+        shipped,
     )
 
 
@@ -234,6 +239,7 @@ def execute_spec(
             plugin=spec.engine == CLAUDE_ENGINE,
             claude_md=spec.engine == CLAUDE_ENGINE and args.rules_claude_md,
             rule_skill_description=case.rule_skill_description,
+            shipped=world.skill_names if args.shipped else frozenset(),
         )
         if isinstance(built, str):
             return _error_record(spec, runs_dir, built)

@@ -51,6 +51,10 @@ class ParseRunArgsTest(unittest.TestCase):
         )
         assert isinstance(full, RunArgs)
         self.assertEqual((full.probe, full.arm, full.model_id), (True, "with", "m"))
+        self.assertFalse(full.shipped, "shipped is opt-in")
+        kit = parse_run_args(["steering/shell", "--shipped"], HOME)
+        assert isinstance(kit, RunArgs)
+        self.assertTrue(kit.shipped)
 
     def test_bad_args_are_usage(self) -> None:
         for argv in (
@@ -165,6 +169,22 @@ class RunSuiteTest(TreeTest):
         self.assertEqual([r["arm"] for r in self.ledger_rows()], ["full", "skill-instead"])
         self.assertEqual(seen[0], "", "the full arm loads the rule as a rule")
         self.assertIn('description: "Use when the rule applies."', seen[1])
+
+    def test_shipped_run_carries_the_source_homes_skills(self) -> None:
+        # goal: --shipped puts the source home's own skills into every arm that has the kit
+        replay = fake_kiro(fixture_text(SHELL_OK), SHELL_OK_SESSION, CALLS)
+        seen: list[bool] = []
+
+        def invoke(argv: list[str], env: Mapping[str, str], cwd: Path, t: float) -> InvokeResult:
+            skill = Path(env.get("KIRO_HOME", "/nonexistent")) / "skills" / "alpha" / "SKILL.md"
+            if argv[1] != "--version":
+                seen.append(skill.is_file())
+            return replay(argv, env, cwd, t)
+
+        lines, code = self.go(self.args(shipped=True), invoke)
+        self.assertEqual(code, 0, lines)
+        self.assertEqual([r["arm"] for r in self.ledger_rows()], ["full", "none"])
+        self.assertEqual(seen, [True, False], "full carries the kit's skill, none is empty")
 
     def test_arm_filter_runs_one_arm(self) -> None:
         self.go(self.args(arm="full"))

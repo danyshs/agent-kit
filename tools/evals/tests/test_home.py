@@ -69,6 +69,47 @@ class PlanHomeTest(unittest.TestCase):
             with self.subTest(label):
                 self.assertIsInstance(plan_home(arm, target, ALWAYS_ON, (), skills), str)
 
+    def test_shipped_skills_ride_in_full_and_minus_arms(self) -> None:
+        shipped = frozenset({"alpha", "oak"})
+        full = plan_home(
+            Arm("full", None), self.steering, ALWAYS_ON, ("rule-b",), (), shipped=shipped
+        )
+        minus = plan_home(
+            Arm("minus", "rule-a"), self.steering, ALWAYS_ON, ("rule-b",), (), shipped=shipped
+        )
+        assert not isinstance(full, str) and not isinstance(minus, str)
+        self.assertEqual(full.skills, ("alpha", "oak"))
+        self.assertEqual(minus.skills, ("alpha", "oak"), "minus removes the rule, not its skill")
+
+    def test_shipped_skill_instead_replaces_the_targets_own_skill(self) -> None:
+        plan = plan_home(
+            Arm("skill-instead", None),
+            self.steering,
+            ALWAYS_ON,
+            (),
+            (),
+            shipped=frozenset({"alpha", "rule-a"}),
+        )
+        assert not isinstance(plan, str)
+        self.assertEqual((plan.skills, plan.rule_skill), (("alpha",), "rule-a"))
+
+    def test_shipped_none_stays_empty_and_needs_a_steering_target(self) -> None:
+        none = plan_home(
+            Arm("none", None),
+            self.steering,
+            ALWAYS_ON,
+            ("rule-b",),
+            ("alpha",),
+            shipped=frozenset({"alpha"}),
+        )
+        assert not isinstance(none, str)
+        self.assertEqual((none.skills, none.steering), ((), ()))
+        for target in (self.skill, Target("network", "tool_group")):
+            self.assertIsInstance(
+                plan_home(Arm("full", None), target, ALWAYS_ON, (), (), shipped=frozenset({"x"})),
+                str,
+            )
+
 
 class BuildHomeTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -162,6 +203,22 @@ class BuildHomeTest(unittest.TestCase):
     def test_missing_steering_source_is_a_reason(self) -> None:
         (self.src / "steering" / "rule-a.md").unlink()
         self.assertIsInstance(self.build(Arm("full", None), Target("rule-a", "steering")), str)
+
+    def test_shipped_skills_are_copied_from_the_source_home(self) -> None:
+        built = build_home(
+            Arm("full", None),
+            Target("rule-a", "steering"),
+            None,
+            (),
+            (),
+            src_home=self.src,
+            dest=self.dest,
+            always_on=frozenset({"rule-a"}),
+            files_max=50,
+            shipped=frozenset({"alpha"}),
+        )
+        assert isinstance(built, HomeDir)
+        self.assertTrue((self.dest / "skills" / "alpha" / "SKILL.md").is_file())
 
     def build_rule_skill(self, description: str | None, dest: Path | None = None) -> HomeDir | str:
         return build_home(
