@@ -79,9 +79,11 @@ def plan_home(
     """What goes in the home; a str is the reason this arm does not fit the target.
 
     shipped holds the Kit's own skills (the --shipped rerun): they ride in every
-    arm but none, as installing the kit ships them alongside its rules. The minus
-    arm keeps the target's own skill — it removes the always-on rule, not the
-    skill — and the skill-instead arm replaces that skill with the rule's text."""
+    arm but none, as installing the kit ships them alongside its rules. Under shipped,
+    minus removes the whole plugin (the always-on rule and its same-named skill
+    together) and skill-instead removes only the rule, keeping the kit's real skill —
+    the old arms' semantics, where the rule's text is written as a skill, only apply
+    without shipped, where no real skill exists to keep."""
     assert target.kind in ("skill", "steering", "tool_group"), "target kind is known"
     if arm.kind == "none":
         return HomePlan((), (), None)  # none = the empty home, extras ignored (3.3)
@@ -104,8 +106,16 @@ def plan_home(
         steering.discard(arm.minus_file)
     assert arm.kind != "full" or always_on <= steering, "full keeps every always-on file"
     extras = set(extra_skills)
+    if shipped:
+        if arm.kind == SKILL_INSTEAD_ARM:
+            if target.kind != "steering" or target.name not in steering:
+                return f"arm {arm.kind!r} needs a steering target the full arm loads"
+            steering.discard(target.name)  # the pointer goes; the kit's own skill stays
+        # shipped minus removes the whole plugin: its rule and its same-named skill together
+        dropped: set[str] = set() if arm.minus_file is None else {arm.minus_file}
+        return HomePlan(tuple(sorted((extras | shipped) - dropped)), tuple(sorted(steering)), None)
     if arm.kind != SKILL_INSTEAD_ARM:
-        return HomePlan(tuple(sorted(extras | shipped)), tuple(sorted(steering)), None)
+        return HomePlan(tuple(sorted(extras)), tuple(sorted(steering)), None)
     if target.kind != "steering" or target.name not in steering:
         return f"arm {arm.kind!r} needs a steering target the full arm loads"
     if target.name in extras:

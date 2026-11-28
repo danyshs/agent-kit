@@ -70,7 +70,7 @@ class PlanHomeTest(unittest.TestCase):
                 self.assertIsInstance(plan_home(arm, target, ALWAYS_ON, (), skills), str)
 
     def test_shipped_skills_ride_in_full_and_minus_arms(self) -> None:
-        shipped = frozenset({"alpha", "oak"})
+        shipped = frozenset({"oak", "rule-a"})  # the kit ships a skill named like its rule
         full = plan_home(
             Arm("full", None), self.steering, ALWAYS_ON, ("rule-b",), (), shipped=shipped
         )
@@ -78,10 +78,22 @@ class PlanHomeTest(unittest.TestCase):
             Arm("minus", "rule-a"), self.steering, ALWAYS_ON, ("rule-b",), (), shipped=shipped
         )
         assert not isinstance(full, str) and not isinstance(minus, str)
-        self.assertEqual(full.skills, ("alpha", "oak"))
-        self.assertEqual(minus.skills, ("alpha", "oak"), "minus removes the rule, not its skill")
+        self.assertEqual(full.skills, ("oak", "rule-a"))
+        self.assertEqual(minus.skills, ("oak",), "minus removes the rule and its same-named skill")
 
-    def test_shipped_skill_instead_replaces_the_targets_own_skill(self) -> None:
+    def test_shipped_minus_without_that_skill_only_drops_the_rule(self) -> None:
+        minus = plan_home(
+            Arm("minus", "rule-c"),
+            self.steering,
+            ALWAYS_ON,
+            (),
+            ("alpha",),
+            shipped=frozenset({"alpha"}),
+        )
+        assert not isinstance(minus, str)
+        self.assertEqual((minus.steering, minus.skills), (("rule-a",), ("alpha",)))
+
+    def test_shipped_skill_instead_keeps_the_kits_own_skill(self) -> None:
         plan = plan_home(
             Arm("skill-instead", None),
             self.steering,
@@ -91,7 +103,8 @@ class PlanHomeTest(unittest.TestCase):
             shipped=frozenset({"alpha", "rule-a"}),
         )
         assert not isinstance(plan, str)
-        self.assertEqual((plan.skills, plan.rule_skill), (("alpha",), "rule-a"))
+        self.assertEqual(plan.steering, ("rule-c",), "the always-on pointer goes")
+        self.assertEqual((plan.skills, plan.rule_skill), (("alpha", "rule-a"), None))
 
     def test_shipped_none_stays_empty_and_needs_a_steering_target(self) -> None:
         none = plan_home(
